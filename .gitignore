@@ -22,6 +22,7 @@ dist/
 build/
 coverage/
 .vite/
+*.tsbuildinfo
 
 # Local runtime data
 logs/
@@ -50,4 +51,3 @@ private/
 *.sql.gz
 *.dump
 *.bak
-

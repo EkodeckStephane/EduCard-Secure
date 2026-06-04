@@ -33,16 +33,27 @@ ROLES = [
 ]
 
 PERMISSIONS = [
-    ("students:read", "students", "read"),
-    ("students:write", "students", "write"),
-    ("cards:read", "cards", "read"),
-    ("cards:write", "cards", "write"),
-    ("attendance:write", "attendance", "write"),
-    ("services:verify", "services", "verify"),
-    ("payments:read", "payments", "read"),
+    ("student:create", "student", "create"),
+    ("student:read", "student", "read"),
+    ("student:update", "student", "update"),
+    ("student:archive", "student", "archive"),
+    ("student:export", "student", "export"),
+    ("card:issue", "card", "issue"),
+    ("card:suspend", "card", "suspend"),
+    ("card:revoke", "card", "revoke"),
+    ("card:verify", "card", "verify"),
+    ("attendance:create", "attendance", "create"),
+    ("attendance:read", "attendance", "read"),
+    ("payment:read", "payment", "read"),
+    ("payment:reconcile", "payment", "reconcile"),
+    ("incident:create", "incident", "create"),
+    ("incident:update", "incident", "update"),
     ("audit:read", "audit", "read"),
-    ("reports:read", "reports", "read"),
-    ("settings:write", "settings", "write"),
+    ("audit:export", "audit", "export"),
+    ("user:create", "user", "create"),
+    ("user:update", "user", "update"),
+    ("role:assign", "role", "assign"),
+    ("settings:update", "settings", "update"),
 ]
 
 

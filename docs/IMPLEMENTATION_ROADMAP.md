@@ -92,13 +92,18 @@ Execution differee :
 
 Actions proposees :
 
-1. Implementer FastAPI sous `/api/v1`.
-2. Implementer authentification, sessions et RBAC.
-3. Implementer services metier prioritaires.
-4. Ajouter audit append-only.
-5. Ajouter providers mock de paiement.
-6. Ajouter verification QR simulee.
-7. Ajouter tests pytest critiques.
+1. Implementer FastAPI sous `/api/v1`. Statut : realise pour auth/users.
+2. Implementer authentification, sessions et RBAC. Statut : realise.
+3. Implementer services metier prioritaires. Statut : hors perimetre phase 3.
+4. Ajouter audit append-only. Statut : journalisation securite realisee, chaine audit complete differee.
+5. Ajouter providers mock de paiement. Statut : deja prepare en phase 2, hors phase 3.
+6. Ajouter verification QR simulee. Statut : hors perimetre phase 3.
+7. Ajouter tests pytest critiques. Statut : realise.
+
+Validation phase 3 :
+
+- Backend pytest : 10 passes.
+- Frontend cree mais non installe : `npm.cmd install` expire sans artefacts.
 
 ## Phase 4 - Frontend
 

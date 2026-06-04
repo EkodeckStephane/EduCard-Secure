@@ -143,3 +143,29 @@ Non realise volontairement :
 - Pas de modification du service Windows MySQL.
 - Pas de modification du port MySQL.
 - Pas de suppression de base existante.
+
+## Phase 3
+
+Statut : backend et frontend de phase 3 implementes et valides.
+
+Fichiers produits ou completes :
+
+- API FastAPI `auth` et `users`.
+- Services Argon2id, sessions, CSRF, MFA TOTP, RBAC et scopes.
+- Tests backend de securite.
+- Frontend React/Vite pour les ecrans de securite.
+- Documentation RBAC, authentification, sessions, MFA, securite et API.
+
+Verifie :
+
+- Tests backend : 10 passes.
+- Import FastAPI : 21 routes, dont les routes auth phase 3.
+- Alembic `upgrade head` idempotent.
+- Scan de secrets : aucun secret reel detecte, seulement placeholders documentes.
+
+Verifie ensuite :
+
+- Installation frontend : `npm.cmd install --no-audit --no-fund --loglevel=warn` reussie apres autorisation reseau/cache.
+- Build frontend : reussi.
+- Test frontend : 1 passe.
+- Lint frontend : reussi.
