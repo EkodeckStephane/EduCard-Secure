@@ -2,6 +2,7 @@ export type Me = {
   public_id: string;
   username: string;
   display_name: string;
+  preferred_language: 'fr' | 'en';
   roles: string[];
   permissions: string[];
   scopes: Array<Record<string, unknown>>;
@@ -86,6 +87,11 @@ export const api = {
     }),
   logout: () => request<{ status: string }>('/api/v1/auth/logout', { method: 'POST' }),
   me: () => request<Me>('/api/v1/auth/me'),
+  setLanguage: (preferred_language: 'fr' | 'en') =>
+    request<{ status: string; preferred_language: 'fr' | 'en' }>('/api/v1/auth/language', {
+      method: 'POST',
+      body: JSON.stringify({ preferred_language }),
+    }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<{ status: string }>('/api/v1/auth/change-password', {
       method: 'POST',

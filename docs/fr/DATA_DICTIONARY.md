@@ -1,0 +1,97 @@
+# Data Dictionary
+
+## Conventions
+
+- `id`: internal numeric primary key.
+- `public_id`: opaque UUID-style identifier safe for APIs.
+- `created_at`, `updated_at`: UTC timestamps.
+- `created_by`, `updated_by`: actor references where needed.
+- `is_demo`: marks synthetic demonstration rows safe for purge.
+- Sensitive values are stored as hashes, encrypted text or masked values.
+
+## Tables
+
+| Table | Purpose | Sensitive data note |
+| --- | --- | --- |
+| users | Application accounts | Stores password hashes only, no plaintext password |
+| roles | RBAC roles | No personal data |
+| permissions | Atomic permissions | No personal data |
+| user_roles | User to role assignments | References users |
+| role_permissions | Role to permission assignments | No personal data |
+| user_scopes | Geographic or school access scopes | References users and scope targets |
+| sessions | Server-side session records | Stores token hashes only |
+| mfa_methods | MFA method metadata | Encrypted secret value only |
+| password_history | Password hash history | Hashes only |
+| login_attempts | Login attempt trail | Minimized username and context |
+| security_events | Security events and alerts | Minimized details |
+| audit_events | Append-only audit events | Opaque resource IDs and minimized justification |
+| audit_event_hashes | Audit integrity hashes | Cryptographic hashes |
+| regions | Administrative region reference | Demo or configured reference data |
+| departments | Administrative department reference | Demo or configured reference data |
+| subdivisions | Administrative subdivision reference | Demo or configured reference data |
+| schools | School reference | Demo schools are fictitious |
+| school_years | School year reference | No personal data |
+| grade_levels | Grade level reference | No personal data |
+| classrooms | Classroom reference | Demo classrooms are fictitious |
+| configuration_settings | Application settings | Sensitive values encrypted |
+| students | Synthetic student records | Demo data only in this prototype |
+| student_guardians | Optional guardian contact | Masked synthetic contact only |
+| enrollments | Annual enrollments | References student and school |
+| transfers | Transfer workflow records | References student and schools |
+| student_status_history | Student status changes | Minimized reason |
+| signing_key_versions | QR signing public metadata | No private keys |
+| cards | Digital card records | Opaque card identifiers |
+| card_status_history | Card status changes | Minimized reason |
+| card_issuance_events | Card issuance events | Minimized details |
+| qr_verification_events | QR verification logs | Opaque identifiers only |
+| attendance_events | Presence events | References student/card without biometrics |
+| attendance_corrections | Validated corrections | Minimized reason |
+| service_types | Configurable service types | No personal data |
+| service_providers | Mock service providers | Fictitious providers |
+| service_entitlements | Service rights | References student |
+| service_verification_events | Service verification logs | Opaque result logging |
+| payment_providers | Mock payment providers | No real provider secret |
+| payment_transactions | Simulated payments | Opaque reference only |
+| payment_reconciliations | Simulated reconciliations | Minimized notes |
+| incidents | Incident register | Minimized incident metadata |
+| incident_events | Incident event history | Minimized comments |
+| exports | Controlled export metadata | No exported payload stored here |
+| export_events | Export lifecycle events | Audit-style metadata |
+| data_access_requests | Privacy requests | References student when needed |
+| retention_rules | Retention policy records | Requires legal validation |
+| data_processing_register | Processing register | Legal basis notes require validation |
+| backup_events | Backup and restore events | File reference only |
+| notification_events | Local notification events | No external messaging by default |
+
+## Phase 7 Field Notes
+
+- `audit_events` and `audit_event_hashes`: chained audit log; integrity can be checked by recomputing hashes.
+- `security_events`: source for local alert views; high and critical severities become actionable alerts.
+- `incidents` and `incident_events`: incident workflow and minimized history.
+- `data_access_requests`: prototype privacy request tracking.
+- `data_processing_register`: processing register entries requiring legal validation.
+- `retention_rules`: draft technical records; no automatic deletion in phase 7.
+- `backup_events`: API read model for backup/restore events; PowerShell backup scripts also produce filesystem hashes.
+
+## MySQL 5.7 notes
+
+Status transitions, one-active-card rules and coherent scopes are enforced by application services and tests because MySQL 5.7 CHECK constraints are not relied upon.
+
+## Phase 4 Field Notes
+
+- `students.student_number`: internal non-official matricule generated by application service and constrained unique.
+- `students.record_version`: optimistic locking counter required by controlled updates.
+- `students.status`: application-enforced status; phase 4 uses `ACTIVE` and `ARCHIVED` in tests.
+- `student_status_history.reason`: minimized administrative reason only.
+- `enrollments`: unique per student and school year.
+- `transfers`: approved synthetic transfer record; no external validation is called.
+- `cards.serial_number`: opaque internal card serial, generated independently of personal data.
+- `cards.card_version`: incremented for replacement cards.
+- `card_status_history` and `card_issuance_events`: complete administrative trace for phase 4 lifecycle operations.
+
+## Phase 6 Field Notes
+
+- `exports.public_id`: opaque filename basis for generated files.
+- `exports.expires_at`: prototype expiration timestamp checked on download.
+- `export_events.event_type`: records lifecycle events; phase 6 stores prototype SHA-256 digest as `CREATED:<hash>`.
+- Dashboard APIs return aggregate values only and mask small non-zero counts.

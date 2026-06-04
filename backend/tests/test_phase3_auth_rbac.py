@@ -114,6 +114,11 @@ def test_login_logout_refresh_and_change_password() -> None:
     me = client.get("/api/v1/auth/me")
     assert me.status_code == 200
     assert "student:create" in me.json()["permissions"]
+    assert me.json()["preferred_language"] == "fr"
+
+    language = client.post("/api/v1/auth/language", json={"preferred_language": "en"}, headers={"X-CSRF-Token": csrf})
+    assert language.status_code == 200
+    assert client.get("/api/v1/auth/me").json()["preferred_language"] == "en"
 
     refreshed = client.post("/api/v1/auth/refresh", headers={"X-CSRF-Token": csrf})
     assert refreshed.status_code == 200

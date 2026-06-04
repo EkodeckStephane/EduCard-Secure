@@ -58,6 +58,7 @@ class User(Base, IdMixin, PublicIdMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(String(40), nullable=False, default="ACTIVE")
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
     mfa_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    preferred_language: Mapped[str] = mapped_column(String(5), default="fr", nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 

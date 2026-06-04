@@ -18,6 +18,10 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=12, max_length=256)
 
 
+class ChangeLanguageRequest(BaseModel):
+    preferred_language: str = Field(pattern="^(fr|en)$")
+
+
 class MfaSetupResponse(BaseModel):
     provisioning_uri: str
     secret_preview: str
@@ -31,6 +35,7 @@ class MeResponse(BaseModel):
     public_id: str
     username: str
     display_name: str
+    preferred_language: str
     roles: list[str]
     permissions: list[str]
     scopes: list[dict]

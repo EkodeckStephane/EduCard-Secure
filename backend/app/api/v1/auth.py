@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.dependencies import CurrentPrincipal, get_current_principal, require_csrf
 from app.core.database import get_db
 from app.core.security_config import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME
-from app.schemas.auth import ChangePasswordRequest, LoginRequest, LoginResponse, MeResponse, MfaCodeRequest, MfaSetupResponse
+from app.schemas.auth import ChangeLanguageRequest, ChangePasswordRequest, LoginRequest, LoginResponse, MeResponse, MfaCodeRequest, MfaSetupResponse
 from app.security.rbac import permissions_for_roles
 from app.services.auth_service import (
     authenticate,
@@ -53,6 +53,7 @@ def me(principal: CurrentPrincipal = Depends(get_current_principal)) -> MeRespon
         public_id=principal.user.public_id,
         username=principal.user.username,
         display_name=principal.user.display_name,
+        preferred_language=principal.user.preferred_language or "fr",
         roles=sorted(principal.role_codes),
         permissions=sorted(permissions_for_roles(principal.role_codes)),
         scopes=[
@@ -66,6 +67,13 @@ def me(principal: CurrentPrincipal = Depends(get_current_principal)) -> MeRespon
 def change_password_route(payload: ChangePasswordRequest, principal: CurrentPrincipal = Depends(get_current_principal), db: Session = Depends(get_db)) -> dict:
     change_password(db, principal.user, payload.current_password, payload.new_password)
     return {"status": "password_changed"}
+
+
+@router.post("/language", dependencies=[Depends(require_csrf)])
+def change_language(payload: ChangeLanguageRequest, principal: CurrentPrincipal = Depends(get_current_principal), db: Session = Depends(get_db)) -> dict:
+    principal.user.preferred_language = payload.preferred_language
+    db.commit()
+    return {"status": "language_changed", "preferred_language": principal.user.preferred_language}
 
 
 @router.post("/mfa/setup", response_model=MfaSetupResponse, dependencies=[Depends(require_csrf)])

@@ -18,7 +18,7 @@ router = APIRouter(tags=["users"])
 
 def _user_response(db: Session, user: User) -> UserResponse:
     roles = db.execute(select(Role.code).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user.id)).scalars().all()
-    return UserResponse(id=user.id, public_id=user.public_id, username=user.username, display_name=user.display_name, status=user.status, roles=list(roles))
+    return UserResponse(id=user.id, public_id=user.public_id, username=user.username, display_name=user.display_name, status=user.status, preferred_language=user.preferred_language or "fr", roles=list(roles))
 
 
 @router.get("/users", response_model=list[UserResponse])
@@ -38,7 +38,7 @@ def create_user(
 ) -> UserResponse:
     if db.execute(select(User).where(User.username == payload.username)).scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
-    user = User(public_id=str(uuid4()), username=payload.username, display_name=payload.display_name, password_hash=hash_password(payload.password), status="ACTIVE", is_demo=True)
+    user = User(public_id=str(uuid4()), username=payload.username, display_name=payload.display_name, password_hash=hash_password(payload.password), status="ACTIVE", preferred_language=payload.preferred_language, is_demo=True)
     db.add(user)
     db.flush()
     for code in payload.role_codes:
@@ -67,6 +67,8 @@ def update_user(
         user.status = payload.status
     if payload.mfa_required is not None:
         user.mfa_required = payload.mfa_required
+    if payload.preferred_language is not None:
+        user.preferred_language = payload.preferred_language
     record_security_event(db, "USER_UPDATED", "MEDIUM", user_id=principal.user.id, resource_type="user", resource_public_id=user.public_id)
     db.commit()
     return _user_response(db, user)

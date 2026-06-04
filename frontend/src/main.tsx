@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CreditCard, FileClock, KeyRound, LogOut, RefreshCw, School, ShieldCheck, UserCog, UsersRound } from 'lucide-react';
 import { api, Card, Me, setCsrf, Student } from './api';
+import { Language, normalizeLanguage, t } from './i18n';
 import './styles.css';
 
 type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'dashboard' | 'dashCards' | 'dashAttendance' | 'dashPayments' | 'dashSecurity' | 'dashServices' | 'exports' | 'audit' | 'integrity' | 'alerts' | 'incidents' | 'privacy' | 'retention' | 'backups' | 'securitySettings' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
@@ -24,44 +25,50 @@ function App() {
     void loadMe();
   }, []);
 
+  const language = normalizeLanguage(me?.preferred_language);
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
   if (!me) {
     return <Login onLogin={loadMe} />;
   }
 
+  const label = (key: string) => t(language, key);
   const can = (permission: string) => me.permissions.includes(permission);
   const tabs: Array<[Tab, string, boolean]> = [
-    ['profile', 'Profil', true],
-    ['password', 'Mot de passe', true],
-    ['mfa', 'MFA', true],
-    ['users', 'Utilisateurs', can('user:create') || can('user:update')],
-    ['roles', 'Roles', can('role:assign')],
-    ['permissions', 'Permissions', can('role:assign')],
-    ['scopes', 'Perimetres', can('role:assign')],
-    ['sessions', 'Sessions', true],
-    ['dashboard', 'Dashboard', can('dashboard:read')],
-    ['dashCards', 'Stats cartes', can('dashboard:read')],
-    ['dashAttendance', 'Stats presence', can('dashboard:read')],
-    ['dashPayments', 'Stats paiements', can('dashboard:read')],
-    ['dashSecurity', 'Stats securite', can('dashboard:read')],
-    ['dashServices', 'Stats services', can('dashboard:read')],
-    ['exports', 'Exports', can('export:create') || can('export:download')],
-    ['audit', 'Audit', can('audit:read')],
-    ['integrity', 'Integrite', can('audit:read')],
-    ['alerts', 'Alertes', can('security:read')],
-    ['incidents', 'Incidents', can('incident:update') || can('incident:create')],
-    ['privacy', 'Donnees', can('privacy:read') || can('privacy:update')],
-    ['retention', 'Retention', can('privacy:read') || can('privacy:update')],
-    ['backups', 'Sauvegardes', can('backup:read')],
-    ['securitySettings', 'Securite', can('security:read')],
-    ['students', 'Eleves', can('student:read')],
-    ['studentForm', 'Nouvel eleve', can('student:create')],
-    ['enrollments', 'Inscriptions', can('student:update')],
-    ['cards', 'Cartes', can('card:verify') || can('card:issue')],
-    ['qr', 'QR', can('card:verify') || can('card:issue')],
-    ['attendance', 'Presence', can('attendance:read') || can('attendance:create')],
-    ['services', 'Services', can('service:verify') || can('service:manage')],
-    ['payments', 'Paiements', can('payment:read') || can('payment:create')],
-    ['anomalies', 'Anomalies', can('audit:read') || can('card:verify')],
+    ['profile', label('profile'), true],
+    ['password', label('password'), true],
+    ['mfa', label('mfa'), true],
+    ['users', label('users'), can('user:create') || can('user:update')],
+    ['roles', label('roles'), can('role:assign')],
+    ['permissions', label('permissions'), can('role:assign')],
+    ['scopes', label('scopes'), can('role:assign')],
+    ['sessions', label('sessions'), true],
+    ['dashboard', label('dashboard'), can('dashboard:read')],
+    ['dashCards', label('dashCards'), can('dashboard:read')],
+    ['dashAttendance', label('dashAttendance'), can('dashboard:read')],
+    ['dashPayments', label('dashPayments'), can('dashboard:read')],
+    ['dashSecurity', label('dashSecurity'), can('dashboard:read')],
+    ['dashServices', label('dashServices'), can('dashboard:read')],
+    ['exports', label('exports'), can('export:create') || can('export:download')],
+    ['audit', label('audit'), can('audit:read')],
+    ['integrity', label('integrity'), can('audit:read')],
+    ['alerts', label('alerts'), can('security:read')],
+    ['incidents', label('incidents'), can('incident:update') || can('incident:create')],
+    ['privacy', label('privacy'), can('privacy:read') || can('privacy:update')],
+    ['retention', label('retention'), can('privacy:read') || can('privacy:update')],
+    ['backups', label('backups'), can('backup:read')],
+    ['securitySettings', label('securitySettings'), can('security:read')],
+    ['students', label('students'), can('student:read')],
+    ['studentForm', label('studentForm'), can('student:create')],
+    ['enrollments', label('enrollments'), can('student:update')],
+    ['cards', label('cards'), can('card:verify') || can('card:issue')],
+    ['qr', label('qr'), can('card:verify') || can('card:issue')],
+    ['attendance', label('attendance'), can('attendance:read') || can('attendance:create')],
+    ['services', label('services'), can('service:verify') || can('service:manage')],
+    ['payments', label('payments'), can('payment:read') || can('payment:create')],
+    ['anomalies', label('anomalies'), can('audit:read') || can('card:verify')],
   ];
 
   async function logout() {
@@ -84,7 +91,7 @@ function App() {
           ))}
         </nav>
         <button className="iconText" onClick={logout}>
-          <LogOut size={18} /> Deconnexion
+          <LogOut size={18} /> {label('logout')}
         </button>
       </aside>
       <section className="workspace">
@@ -93,9 +100,21 @@ function App() {
             <h1>{me.display_name}</h1>
             <p>{me.roles.join(', ')}</p>
           </div>
-          <button className="iconButton" onClick={() => void loadMe()} title="Actualiser">
-            <RefreshCw size={20} />
-          </button>
+          <div className="toolbar">
+            <label>
+              {label('language')}
+              <select value={language} onChange={(event) => {
+                const next = event.target.value as Language;
+                api.setLanguage(next).then(loadMe).catch(() => setError(label('languageDenied')));
+              }}>
+                <option value="fr">{label('french')}</option>
+                <option value="en">{label('english')}</option>
+              </select>
+            </label>
+            <button className="iconButton" onClick={() => void loadMe()} title={label('refresh')}>
+              <RefreshCw size={20} />
+            </button>
+          </div>
         </header>
         {error && <div className="alert">{error}</div>}
         {tab === 'profile' && <Profile me={me} />}
@@ -136,6 +155,8 @@ function App() {
 }
 
 function Login({ onLogin }: { onLogin: () => Promise<void> }) {
+  const [language, setLanguage] = useState<Language>(normalizeLanguage(navigator.language?.slice(0, 2)));
+  const label = (key: string) => t(language, key);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [mfa, setMfa] = useState('');
@@ -153,7 +174,7 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
       if (response.csrf_token) setCsrf(response.csrf_token);
       await onLogin();
     } catch {
-      setError('Authentification refusee');
+      setError(label('authenticationDenied'));
     }
   }
 
@@ -162,12 +183,16 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
       <form className="loginPanel" onSubmit={submit}>
         <ShieldCheck size={36} />
         <h1>EduCard Secure</h1>
-        <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Utilisateur" />
-        <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mot de passe" type="password" />
+        <select value={language} onChange={(event) => setLanguage(event.target.value as Language)} aria-label={label('language')}>
+          <option value="fr">{label('french')}</option>
+          <option value="en">{label('english')}</option>
+        </select>
+        <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder={label('username')} />
+        <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder={label('password')} type="password" />
         {needsMfa && <input value={mfa} onChange={(event) => setMfa(event.target.value)} placeholder="Code MFA" />}
         {error && <div className="alert">{error}</div>}
         <button className="primary" type="submit">
-          <KeyRound size={18} /> Connexion
+          <KeyRound size={18} /> {label('login')}
         </button>
       </form>
     </main>
@@ -251,7 +276,7 @@ function ScopesPanel({ onError }: { onError: (value: string) => void }) {
 }
 
 function SessionPanel() {
-  return <section className="panel"><UsersRound size={24} /><p>Session courante protegee par cookie HttpOnly et jeton CSRF.</p></section>;
+  return <section className="panel"><UsersRound size={24} /><p>{t(normalizeLanguage(document.documentElement.lang), 'currentSessionSecurity')}</p></section>;
 }
 
 function DashboardPanel({ onError }: { onError: (value: string) => void }) {

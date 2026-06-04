@@ -298,3 +298,21 @@ Non realise volontairement :
 - Aucune restauration de sauvegarde.
 - Aucune suppression de donnees.
 - Aucune validation juridique definitive.
+
+## Internationalisation
+
+Statut : preference utilisateur `fr`/`en` ajoutee au backend et au frontend.
+
+Realise :
+
+- Champ `users.preferred_language`.
+- Endpoint `POST /api/v1/auth/language`.
+- `GET /api/v1/auth/me` expose `preferred_language`.
+- Selecteur de langue dans le frontend.
+- Repertoires documentaires `docs/fr` et `docs/en`.
+
+Limite :
+
+- Les anciens fichiers documentaires ont ete recopies dans les deux repertoires
+  pour etablir la structure bilingue. Une revue/traduction humaine complete
+  reste necessaire pour obtenir deux corpus strictement homogenes.
