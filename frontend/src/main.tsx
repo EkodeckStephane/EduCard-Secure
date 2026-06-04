@@ -372,9 +372,9 @@ function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean
   const [classrooms, setClassrooms] = useState<Array<Record<string, unknown>>>([]);
   const [schoolYears, setSchoolYears] = useState<Array<Record<string, unknown>>>([]);
   const [gradeLevels, setGradeLevels] = useState<Array<Record<string, unknown>>>([]);
-  const [regionForm, setRegionForm] = useState({ code: '', name: '' });
-  const [departmentForm, setDepartmentForm] = useState({ region_id: '', code: '', name: '' });
-  const [subdivisionForm, setSubdivisionForm] = useState({ department_id: '', code: '', name: '' });
+  const [regionForm, setRegionForm] = useState({ code: '', name: '', capital: '' });
+  const [departmentForm, setDepartmentForm] = useState({ region_id: '', code: '', name: '', capital: '' });
+  const [subdivisionForm, setSubdivisionForm] = useState({ department_id: '', code: '', name: '', capital: '' });
   const [schoolForm, setSchoolForm] = useState({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'DEMO', status: 'ACTIVE' });
   const [yearForm, setYearForm] = useState({ code: '', starts_on: '', ends_on: '', status: 'PLANNED' });
   const [classroomForm, setClassroomForm] = useState({ school_id: '', school_year_id: '', grade_level_id: '', code: '', label: '', capacity: '' });
@@ -443,13 +443,14 @@ function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean
       </section>
       {canManage && (
         <section className="grid2">
-          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createRegion(regionForm), () => setRegionForm({ code: '', name: '' }))}>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createRegion(regionForm), () => setRegionForm({ code: '', name: '', capital: '' }))}>
             <h2>Creer une region</h2>
             <input placeholder="Code region" value={regionForm.code} onChange={(event) => setRegionForm({ ...regionForm, code: event.target.value })} />
             <input placeholder="Nom region" value={regionForm.name} onChange={(event) => setRegionForm({ ...regionForm, name: event.target.value })} />
+            <input placeholder="Chef-lieu" value={regionForm.capital} onChange={(event) => setRegionForm({ ...regionForm, capital: event.target.value })} />
             <button className="primary">Creer region</button>
           </form>
-          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createDepartment({ ...departmentForm, region_id: Number(departmentForm.region_id) }), () => setDepartmentForm({ region_id: '', code: '', name: '' }))}>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createDepartment({ ...departmentForm, region_id: Number(departmentForm.region_id) }), () => setDepartmentForm({ region_id: '', code: '', name: '', capital: '' }))}>
             <h2>Creer un departement</h2>
             <select value={departmentForm.region_id} onChange={(event) => setDepartmentForm({ ...departmentForm, region_id: event.target.value })}>
               <option value="">Region</option>
@@ -457,9 +458,10 @@ function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean
             </select>
             <input placeholder="Code departement" value={departmentForm.code} onChange={(event) => setDepartmentForm({ ...departmentForm, code: event.target.value })} />
             <input placeholder="Nom departement" value={departmentForm.name} onChange={(event) => setDepartmentForm({ ...departmentForm, name: event.target.value })} />
+            <input placeholder="Chef-lieu" value={departmentForm.capital} onChange={(event) => setDepartmentForm({ ...departmentForm, capital: event.target.value })} />
             <button className="primary">Creer departement</button>
           </form>
-          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSubdivision({ ...subdivisionForm, department_id: Number(subdivisionForm.department_id) }), () => setSubdivisionForm({ department_id: '', code: '', name: '' }))}>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSubdivision({ ...subdivisionForm, department_id: Number(subdivisionForm.department_id) }), () => setSubdivisionForm({ department_id: '', code: '', name: '', capital: '' }))}>
             <h2>Creer arrondissement / district</h2>
             <select value={subdivisionForm.department_id} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, department_id: event.target.value })}>
               <option value="">Departement</option>
@@ -467,6 +469,7 @@ function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean
             </select>
             <input placeholder="Code arrondissement" value={subdivisionForm.code} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, code: event.target.value })} />
             <input placeholder="Nom arrondissement" value={subdivisionForm.name} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, name: event.target.value })} />
+            <input placeholder="Chef-lieu" value={subdivisionForm.capital} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, capital: event.target.value })} />
             <button className="primary">Creer arrondissement</button>
           </form>
           <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSchool({ ...schoolForm, subdivision_id: Number(schoolForm.subdivision_id) }), () => setSchoolForm({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'DEMO', status: 'ACTIVE' }))}>
@@ -523,15 +526,15 @@ function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }
       const departmentId = String(row.department_id ?? 'department-unknown');
       const subdivisionId = String(row.subdivision_id ?? 'subdivision-unknown');
       if (!regionMap.has(regionId)) {
-        regionMap.set(regionId, { id: regionId, label: String(row.region ?? 'Region non renseignee'), details: { type: 'Region', id: regionId, nom: row.region }, departments: new Map() });
+        regionMap.set(regionId, { id: regionId, label: String(row.region ?? 'Region non renseignee'), details: { type: 'Region', id: regionId, nom: row.region, chef_lieu: row.region_capital }, departments: new Map() });
       }
       const region = regionMap.get(regionId)!;
       if (!region.departments.has(departmentId)) {
-        region.departments.set(departmentId, { id: departmentId, label: String(row.department ?? 'Departement non renseigne'), details: { type: 'Departement', id: departmentId, nom: row.department, region: row.region }, subdivisions: new Map() });
+        region.departments.set(departmentId, { id: departmentId, label: String(row.department ?? 'Departement non renseigne'), details: { type: 'Departement', id: departmentId, nom: row.department, chef_lieu: row.department_capital, region: row.region }, subdivisions: new Map() });
       }
       const department = region.departments.get(departmentId)!;
       if (!department.subdivisions.has(subdivisionId)) {
-        department.subdivisions.set(subdivisionId, { id: subdivisionId, label: String(row.subdivision ?? 'Arrondissement non renseigne'), details: { type: 'Arrondissement / district', id: subdivisionId, nom: row.subdivision, departement: row.department, region: row.region }, schools: [] });
+        department.subdivisions.set(subdivisionId, { id: subdivisionId, label: String(row.subdivision ?? 'Arrondissement non renseigne'), details: { type: 'Arrondissement / district', id: subdivisionId, nom: row.subdivision, chef_lieu: row.subdivision_capital, departement: row.department, region: row.region }, schools: [] });
       }
       department.subdivisions.get(subdivisionId)!.schools.push({
         id: String(row.school_id ?? 'school-unknown'),

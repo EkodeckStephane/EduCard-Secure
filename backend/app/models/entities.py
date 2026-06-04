@@ -116,6 +116,7 @@ class Region(Base, IdMixin, TimestampMixin):
 
     code: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    capital: Mapped[str | None] = mapped_column(String(160))
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -128,6 +129,7 @@ class Department(Base, IdMixin, TimestampMixin):
     region_id: Mapped[int] = mapped_column(ForeignKey("regions.id"), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(40), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    capital: Mapped[str | None] = mapped_column(String(160))
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -140,6 +142,7 @@ class Subdivision(Base, IdMixin, TimestampMixin):
     department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(40), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    capital: Mapped[str | None] = mapped_column(String(160))
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 

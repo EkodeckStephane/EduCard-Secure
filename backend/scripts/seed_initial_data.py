@@ -14,6 +14,7 @@ from app.models.entities import (
     SchoolYear,
     ServiceType,
 )
+from scripts.seed_cameroon_administrative_data import main as seed_cameroon_administrative_data
 
 
 ROLES = [
@@ -120,6 +121,7 @@ def main() -> None:
 
         session.commit()
         print("Initial reference data loaded.")
+    seed_cameroon_administrative_data()
 
 
 if __name__ == "__main__":

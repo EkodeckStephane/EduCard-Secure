@@ -26,6 +26,7 @@ from app.models.entities import (
     UserScope,
 )
 from app.security.passwords import hash_password
+from scripts.seed_cameroon_administrative_data import main as seed_cameroon_administrative_data
 
 
 def ensure_demo_user(session, username: str, display_name: str, password: str, role_code: str, scope_type: str, region_id: int | None = None, school_id: int | None = None) -> None:
@@ -51,22 +52,22 @@ def ensure_demo_user(session, username: str, display_name: str, password: str, r
 
 
 def main() -> None:
+    seed_cameroon_administrative_data()
     with SessionLocal() as session:
-        region = session.execute(select(Region).filter_by(code="DEMO-CENTRAL")).scalar_one()
+        region = session.execute(select(Region).filter_by(code="CENTRE")).scalar_one()
+        subdivision = (
+            session.execute(select(Subdivision).filter_by(code="YAOUNDE-1ER")).scalar_one_or_none()
+            or session.execute(select(Subdivision).join(Department).where(Department.region_id == region.id)).scalar_one()
+        )
         ensure_demo_user(session, "demo.central", "Demo Administration Centrale", "DemoCentral!12345", "ADMINISTRATION_CENTRALE", "NATIONAL")
         ensure_demo_user(session, "demo.regional", "Demo Delegation Regionale", "DemoRegional!12345", "DELEGATION_REGIONALE", "REGION", region_id=region.id)
         existing_school = session.execute(select(School).filter_by(code="DEMO-SCH-001")).scalar_one_or_none()
         if existing_school:
+            existing_school.subdivision_id = subdivision.id
             ensure_demo_user(session, "demo.school", "Demo Responsable Etablissement", "DemoSchool!12345", "RESPONSABLE_ETABLISSEMENT", "SCHOOL", school_id=existing_school.id)
             session.commit()
             print("Synthetic demo data already loaded.")
             return
-        department = Department(region_id=region.id, code="DEMO-DPT-01", name="Departement Demo 01", is_demo=True)
-        session.add(department)
-        session.flush()
-        subdivision = Subdivision(department_id=department.id, code="DEMO-ARR-01", name="Arrondissement Demo 01", is_demo=True)
-        session.add(subdivision)
-        session.flush()
         school = School(
             public_id=str(uuid4()),
             subdivision_id=subdivision.id,

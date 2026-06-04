@@ -6,18 +6,21 @@ from pydantic import BaseModel, Field
 class RegionCreateRequest(BaseModel):
     code: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=160)
+    capital: str | None = Field(default=None, max_length=160)
 
 
 class DepartmentCreateRequest(BaseModel):
     region_id: int
     code: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=160)
+    capital: str | None = Field(default=None, max_length=160)
 
 
 class SubdivisionCreateRequest(BaseModel):
     department_id: int
     code: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=160)
+    capital: str | None = Field(default=None, max_length=160)
 
 
 class SchoolCreateRequest(BaseModel):
@@ -43,4 +46,3 @@ class SchoolYearCreateRequest(BaseModel):
     starts_on: date
     ends_on: date
     status: str = Field(default="PLANNED", max_length=40)
-

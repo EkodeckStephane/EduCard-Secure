@@ -62,10 +62,13 @@ def _school_map_rows(db: Session, principal: CurrentPrincipal) -> list[dict]:
             {
                 "region_id": region.id,
                 "region": region.name,
+                "region_capital": region.capital,
                 "department_id": department.id,
                 "department": department.name,
+                "department_capital": department.capital,
                 "subdivision_id": subdivision.id,
                 "subdivision": subdivision.name,
+                "subdivision_capital": subdivision.capital,
                 "school_id": school.id,
                 "school_code": school.code,
                 "school": school.name,
@@ -98,12 +101,12 @@ def hierarchy(
 def list_regions(principal: CurrentPrincipal = Depends(require_permission("student:read")), db: Session = Depends(get_db)) -> list[dict]:
     rows = db.execute(select(Region).order_by(Region.name)).scalars().all()
     if any(scope.scope_type == "NATIONAL" for scope in principal.scopes):
-        return [{"id": row.id, "code": row.code, "name": row.name} for row in rows]
+        return [{"id": row.id, "code": row.code, "name": row.name, "capital": row.capital} for row in rows]
     allowed = {scope.region_id for scope in principal.scopes if scope.scope_type == "REGION" and scope.region_id}
     allowed.update(
         db.execute(select(Department.region_id).where(Department.id.in_([scope.department_id for scope in principal.scopes if scope.department_id]))).scalars().all()
     )
-    return [{"id": row.id, "code": row.code, "name": row.name} for row in rows if row.id in allowed]
+    return [{"id": row.id, "code": row.code, "name": row.name, "capital": row.capital} for row in rows if row.id in allowed]
 
 
 @router.get("/school-map/departments")
@@ -112,7 +115,7 @@ def list_departments(region_id: int | None = None, principal: CurrentPrincipal =
     if region_id:
         stmt = stmt.where(Department.region_id == region_id)
     rows = db.execute(stmt).scalars().all()
-    return [{"id": row.id, "region_id": row.region_id, "code": row.code, "name": row.name} for row in rows if _department_allowed(db, principal, row.id)]
+    return [{"id": row.id, "region_id": row.region_id, "code": row.code, "name": row.name, "capital": row.capital} for row in rows if _department_allowed(db, principal, row.id)]
 
 
 @router.get("/school-map/subdivisions")
@@ -121,7 +124,7 @@ def list_subdivisions(department_id: int | None = None, principal: CurrentPrinci
     if department_id:
         stmt = stmt.where(Subdivision.department_id == department_id)
     rows = db.execute(stmt).scalars().all()
-    return [{"id": row.id, "department_id": row.department_id, "code": row.code, "name": row.name} for row in rows if _subdivision_allowed(db, principal, row.id)]
+    return [{"id": row.id, "department_id": row.department_id, "code": row.code, "name": row.name, "capital": row.capital} for row in rows if _subdivision_allowed(db, principal, row.id)]
 
 
 @router.get("/school-map/schools")
@@ -162,33 +165,33 @@ def list_classrooms(school_id: int | None = None, principal: CurrentPrincipal = 
 def create_region(payload: RegionCreateRequest, principal: CurrentPrincipal = Depends(require_permission("settings:update")), db: Session = Depends(get_db)) -> dict:
     if not any(scope.scope_type == "NATIONAL" for scope in principal.scopes):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="National scope required")
-    row = Region(code=payload.code, name=payload.name, is_demo=True)
+    row = Region(code=payload.code, name=payload.name, capital=payload.capital, is_demo=True)
     db.add(row)
     record_security_event(db, "REGION_CREATED", "MEDIUM", principal.user.id, "region", payload.code)
     db.commit()
-    return {"id": row.id, "code": row.code, "name": row.name}
+    return {"id": row.id, "code": row.code, "name": row.name, "capital": row.capital}
 
 
 @router.post("/school-map/departments", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_csrf)])
 def create_department(payload: DepartmentCreateRequest, principal: CurrentPrincipal = Depends(require_permission("settings:update")), db: Session = Depends(get_db)) -> dict:
     if not any(scope.scope_type == "NATIONAL" or (scope.scope_type == "REGION" and scope.region_id == payload.region_id) for scope in principal.scopes):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Region outside assigned scope")
-    row = Department(region_id=payload.region_id, code=payload.code, name=payload.name, is_demo=True)
+    row = Department(region_id=payload.region_id, code=payload.code, name=payload.name, capital=payload.capital, is_demo=True)
     db.add(row)
     record_security_event(db, "DEPARTMENT_CREATED", "MEDIUM", principal.user.id, "department", payload.code)
     db.commit()
-    return {"id": row.id, "region_id": row.region_id, "code": row.code, "name": row.name}
+    return {"id": row.id, "region_id": row.region_id, "code": row.code, "name": row.name, "capital": row.capital}
 
 
 @router.post("/school-map/subdivisions", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_csrf)])
 def create_subdivision(payload: SubdivisionCreateRequest, principal: CurrentPrincipal = Depends(require_permission("settings:update")), db: Session = Depends(get_db)) -> dict:
     if not _department_allowed(db, principal, payload.department_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Department outside assigned scope")
-    row = Subdivision(department_id=payload.department_id, code=payload.code, name=payload.name, is_demo=True)
+    row = Subdivision(department_id=payload.department_id, code=payload.code, name=payload.name, capital=payload.capital, is_demo=True)
     db.add(row)
     record_security_event(db, "SUBDIVISION_CREATED", "MEDIUM", principal.user.id, "subdivision", payload.code)
     db.commit()
-    return {"id": row.id, "department_id": row.department_id, "code": row.code, "name": row.name}
+    return {"id": row.id, "department_id": row.department_id, "code": row.code, "name": row.name, "capital": row.capital}
 
 
 @router.post("/school-map/schools", status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_csrf)])
@@ -221,4 +224,3 @@ def create_school_year(payload: SchoolYearCreateRequest, principal: CurrentPrinc
     record_security_event(db, "SCHOOL_YEAR_CREATED", "MEDIUM", principal.user.id, "school_year", payload.code)
     db.commit()
     return {"id": row.id, "code": row.code, "starts_on": str(row.starts_on), "ends_on": str(row.ends_on), "status": row.status}
-
