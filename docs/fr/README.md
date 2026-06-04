@@ -1,19 +1,7 @@
 # Documentation EduCard Secure
 
-Ce repertoire contient la documentation en francais.
+Ce repertoire contient la documentation francaise d'EduCard Secure. Les noms de routes, tables, permissions et commandes restent en anglais lorsqu'ils correspondent au code.
 
-## Regle de maintenance
+## Statut
 
-Toute nouvelle documentation doit etre maintenue en deux langues :
-
-- version francaise dans `docs/fr`;
-- version anglaise dans `docs/en`.
-
-Les fichiers historiques situes directement dans `docs` sont conserves pour
-compatibilite avec les phases deja executees.
-
-## Langue de l'application
-
-L'application expose une preference utilisateur `preferred_language` avec les
-valeurs `fr` et `en`. Le frontend utilise cette preference pour afficher les
-libelles principaux dans la langue de l'utilisateur.
+Document francais normalise pour la livraison locale. Les elements techniques conservent leurs identifiants originaux afin de rester verifiables dans le code et les tests.

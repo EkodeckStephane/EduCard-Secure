@@ -1,21 +1,7 @@
-# Services
+# Services configurables
 
-Phase 5 adds a generic service eligibility engine.
+Le moteur gere types de services, fournisseurs fictifs, droits, periodes de validite, verification et journalisation. Aucune regle institutionnelle reelle n'est codee.
 
-## Objects
+## Statut
 
-- `service_types`: configurable service category.
-- `service_providers`: fictitious providers only.
-- `service_entitlements`: student entitlement for a period.
-- `service_verification_events`: verification history.
-
-## Verification
-
-The backend grants access only when an entitlement is:
-
-- attached to the student;
-- attached to the requested service type;
-- `ACTIVE`;
-- within its validity period.
-
-No institutional rule is hard-coded. All examples are fictitious.
+Document francais normalise pour la livraison locale. Les elements techniques conservent leurs identifiants originaux afin de rester verifiables dans le code et les tests.

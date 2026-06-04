@@ -1,30 +1,7 @@
 # MFA TOTP
 
-## Scope
+Le MFA TOTP couvre activation, confirmation, verification et desactivation controlee. Il est obligatoire pour les comptes privilegies.
 
-Phase 3 implements TOTP MFA for privileged accounts and optional MFA for other users.
+## Statut
 
-Implemented endpoints:
-
-- `POST /api/v1/auth/mfa/setup`
-- `POST /api/v1/auth/mfa/confirm`
-- `POST /api/v1/auth/mfa/verify`
-- `POST /api/v1/auth/mfa/disable`
-
-## Secret storage
-
-TOTP secrets are encrypted before storage in `mfa_methods.secret_encrypted`.
-Secrets are not logged and are only returned during setup.
-
-## Privileged roles
-
-The following roles require MFA:
-
-- `SUPER_ADMIN_TECHNIQUE`
-- `ADMINISTRATION_CENTRALE`
-- `AUDITEUR_SECURITE`
-
-## Disable flow
-
-Self-service disable requires a valid TOTP code. Administrative disable should be handled through a controlled support flow in a later phase.
-
+Document francais normalise pour la livraison locale. Les elements techniques conservent leurs identifiants originaux afin de rester verifiables dans le code et les tests.

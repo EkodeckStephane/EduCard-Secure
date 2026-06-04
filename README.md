@@ -4,7 +4,8 @@ Prototype local de gestion d'une carte scolaire digitale unique.
 
 ## Statut
 
-Ce depot est en phase 0 : cadrage initial, verification de l'environnement et documentation de demarrage.
+Ce depot a atteint la phase 8 : audit final, tests complets, documentation
+finale et preparation d'une livraison locale demonstrable.
 
 EduCard Secure est un prototype academique et technique independant. Il ne doit jamais etre presente comme une plateforme officielle du MINESEC, de MTN Cameroon, de MTN Mobile Money Corporation ou d'une autre institution.
 
@@ -71,8 +72,49 @@ npx.cmd vite --version
 npx.cmd eslint .
 ```
 
-## Phase courante
+## Fonctionnalites implementees
 
-La phase 0 ne cree pas la base de donnees, n'installe aucune dependance et ne modifie aucune installation systeme.
+- Authentification, sessions, CSRF, MFA TOTP, RBAC et scopes.
+- Gestion des eleves, inscriptions, transferts et cycle administratif des cartes.
+- QR signes Ed25519 avec payload sans donnees personnelles directes.
+- Presence, services configurables et paiements entierement simules.
+- Tableaux de bord, statistiques et exports controles.
+- Audit chaine SHA-256, alertes, incidents, sauvegardes et controles privacy.
+- Preference utilisateur `fr`/`en` pour les libelles principaux du frontend.
 
-La phase 1 devra produire l'architecture detaillee, le schema cible, le diagramme Mermaid et les decisions sensibles avant toute implementation lourde.
+## Documentation
+
+La documentation est structuree en deux repertoires :
+
+- `docs/fr`
+- `docs/en`
+
+Les fichiers historiques directement dans `docs` sont conserves pour
+compatibilite avec les consignes de phases. Le corpus francais est maintenu
+dans `docs/fr` et le corpus anglais dans `docs/en`.
+
+## Validation locale
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_all_tests.ps1
+```
+
+Cette commande verifie l'etat Alembic, les tests backend, le lint frontend, les
+tests frontend, le build frontend, un scan simple de secrets et l'etat Git.
+
+## Lancement local
+
+Backend :
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Frontend :
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev
+```

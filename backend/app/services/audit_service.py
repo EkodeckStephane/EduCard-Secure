@@ -47,7 +47,15 @@ def append_audit_event(
     severity: str = "INFO",
     correlation_id: str | None = None,
 ) -> AuditEvent:
-    previous = db.execute(select(AuditEventHash).order_by(AuditEventHash.id.desc())).scalars().first()
+    previous = (
+        db.execute(
+            select(AuditEventHash)
+            .join(AuditEvent, AuditEvent.id == AuditEventHash.audit_event_id)
+            .order_by(AuditEvent.id.desc())
+        )
+        .scalars()
+        .first()
+    )
     previous_hash = previous.event_hash if previous else None
     event = AuditEvent(
         event_public_id=str(uuid4()),

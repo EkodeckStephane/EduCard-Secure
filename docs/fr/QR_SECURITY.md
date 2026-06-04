@@ -1,47 +1,7 @@
-# QR Security
+# Securite QR
 
-Phase 5 implements local signed QR payloads for the prototype.
+Le payload QR contient seulement version, identifiants opaques, validite, nonce, version de cle et signature. Il exclut nom, prenom, naissance, photo, classe, etablissement detaille et donnees financieres.
 
-## Payload Content
+## Statut
 
-The payload contains only:
-
-- format version;
-- opaque identifier;
-- internal card id;
-- validity timestamp;
-- nonce;
-- signing key version;
-- Ed25519 signature.
-
-The payload does not contain names, birth dates, phone numbers, photos, detailed school data, classroom data or financial data.
-
-## Signature
-
-The backend signs a canonical JSON body with Ed25519. Verification checks:
-
-- payload structure;
-- key version existence;
-- key status;
-- public key fingerprint;
-- signature;
-- timestamp validity;
-- card status;
-- backend scope.
-
-## Results
-
-Verification can return:
-
-- `valide`;
-- `carte suspendue`;
-- `carte revoquee`;
-- `carte inconnue`;
-- `signature invalide`;
-- `cle inconnue`;
-- `cle revoquee`;
-- `identifiant expire`;
-- `payload mal forme`;
-- `anomalie`.
-
-Every verification writes `qr_verification_events` and a minimized `security_events` entry.
+Document francais normalise pour la livraison locale. Les elements techniques conservent leurs identifiants originaux afin de rester verifiables dans le code et les tests.
