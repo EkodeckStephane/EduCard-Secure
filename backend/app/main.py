@@ -6,6 +6,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.cards import router as cards_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.phase5 import router as phase5_router
+from app.api.v1.school_map import router as school_map_router
 from app.api.v1.security_ops import router as security_ops_router
 from app.api.v1.students import router as students_router
 from app.api.v1.users import router as users_router
@@ -37,6 +38,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(cards_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(phase5_router, prefix="/api/v1")
+app.include_router(school_map_router, prefix="/api/v1")
 app.include_router(security_ops_router, prefix="/api/v1")
 app.include_router(students_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")

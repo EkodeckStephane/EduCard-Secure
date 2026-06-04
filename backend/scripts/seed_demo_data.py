@@ -16,18 +16,49 @@ from app.models.entities import (
     PaymentProvider,
     PaymentTransaction,
     Region,
+    Role,
     School,
     SchoolYear,
     Student,
     Subdivision,
+    User,
+    UserRole,
+    UserScope,
 )
+from app.security.passwords import hash_password
+
+
+def ensure_demo_user(session, username: str, display_name: str, password: str, role_code: str, scope_type: str, region_id: int | None = None, school_id: int | None = None) -> None:
+    user = session.execute(select(User).filter_by(username=username)).scalar_one_or_none()
+    if not user:
+        user = User(
+            public_id=str(uuid4()),
+            username=username,
+            display_name=display_name,
+            password_hash=hash_password(password),
+            status="ACTIVE",
+            preferred_language="fr",
+            mfa_required=False,
+            is_demo=True,
+        )
+        session.add(user)
+        session.flush()
+    role = session.execute(select(Role).filter_by(code=role_code)).scalar_one()
+    if not session.execute(select(UserRole).filter_by(user_id=user.id, role_id=role.id)).scalar_one_or_none():
+        session.add(UserRole(user_id=user.id, role_id=role.id, assigned_by=user.id))
+    if not session.execute(select(UserScope).filter_by(user_id=user.id, scope_type=scope_type, region_id=region_id, school_id=school_id)).scalar_one_or_none():
+        session.add(UserScope(user_id=user.id, scope_type=scope_type, region_id=region_id, school_id=school_id))
 
 
 def main() -> None:
     with SessionLocal() as session:
         region = session.execute(select(Region).filter_by(code="DEMO-CENTRAL")).scalar_one()
+        ensure_demo_user(session, "demo.central", "Demo Administration Centrale", "DemoCentral!12345", "ADMINISTRATION_CENTRALE", "NATIONAL")
+        ensure_demo_user(session, "demo.regional", "Demo Delegation Regionale", "DemoRegional!12345", "DELEGATION_REGIONALE", "REGION", region_id=region.id)
         existing_school = session.execute(select(School).filter_by(code="DEMO-SCH-001")).scalar_one_or_none()
         if existing_school:
+            ensure_demo_user(session, "demo.school", "Demo Responsable Etablissement", "DemoSchool!12345", "RESPONSABLE_ETABLISSEMENT", "SCHOOL", school_id=existing_school.id)
+            session.commit()
             print("Synthetic demo data already loaded.")
             return
         department = Department(region_id=region.id, code="DEMO-DPT-01", name="Departement Demo 01", is_demo=True)
@@ -48,6 +79,7 @@ def main() -> None:
         )
         session.add(school)
         session.flush()
+        ensure_demo_user(session, "demo.school", "Demo Responsable Etablissement", "DemoSchool!12345", "RESPONSABLE_ETABLISSEMENT", "SCHOOL", school_id=school.id)
         year = session.execute(select(SchoolYear).filter_by(code="2026-2027")).scalar_one()
         classroom = Classroom(school_id=school.id, school_year_id=year.id, grade_level_id=1, code="6E-A", label="6e Demo A", is_demo=True)
         session.add(classroom)

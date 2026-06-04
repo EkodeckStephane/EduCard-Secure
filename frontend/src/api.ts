@@ -41,6 +41,11 @@ export type Card = {
   revoked_at: string | null;
 };
 
+export type SchoolHierarchy = {
+  scopes: Array<Record<string, unknown>>;
+  schools: Array<Record<string, unknown>>;
+};
+
 let csrfToken = '';
 
 export function setCsrf(token: string) {
@@ -106,6 +111,20 @@ export const api = {
   createUser: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/users', { method: 'POST', body: JSON.stringify(payload) }),
   assignScope: (id: number, payload: Record<string, unknown>) =>
     request<Record<string, unknown>>(`/api/v1/users/${id}/scopes`, { method: 'POST', body: JSON.stringify(payload) }),
+  schoolHierarchy: () => request<SchoolHierarchy>('/api/v1/school-map/hierarchy'),
+  regions: () => request<Array<Record<string, unknown>>>('/api/v1/school-map/regions'),
+  departments: () => request<Array<Record<string, unknown>>>('/api/v1/school-map/departments'),
+  subdivisions: () => request<Array<Record<string, unknown>>>('/api/v1/school-map/subdivisions'),
+  schools: () => request<Array<Record<string, unknown>>>('/api/v1/school-map/schools'),
+  classrooms: (schoolId?: number) => request<Array<Record<string, unknown>>>(`/api/v1/school-map/classrooms${schoolId ? `?school_id=${schoolId}` : ''}`),
+  schoolYears: () => request<Array<Record<string, unknown>>>('/api/v1/school-map/school-years'),
+  gradeLevels: () => request<Array<Record<string, unknown>>>('/api/v1/school-map/grade-levels'),
+  createRegion: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/school-map/regions', { method: 'POST', body: JSON.stringify(payload) }),
+  createDepartment: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/school-map/departments', { method: 'POST', body: JSON.stringify(payload) }),
+  createSubdivision: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/school-map/subdivisions', { method: 'POST', body: JSON.stringify(payload) }),
+  createSchool: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/school-map/schools', { method: 'POST', body: JSON.stringify(payload) }),
+  createClassroom: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/school-map/classrooms', { method: 'POST', body: JSON.stringify(payload) }),
+  createSchoolYear: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/school-map/school-years', { method: 'POST', body: JSON.stringify(payload) }),
   students: (params = '') => request<StudentList>(`/api/v1/students${params}`),
   student: (id: number) => request<Student>(`/api/v1/students/${id}`),
   createStudent: (payload: Record<string, unknown>) => request<Student>('/api/v1/students', { method: 'POST', body: JSON.stringify(payload) }),

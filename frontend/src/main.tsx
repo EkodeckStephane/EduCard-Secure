@@ -5,7 +5,7 @@ import { api, Card, Me, setCsrf, Student } from './api';
 import { Language, normalizeLanguage, t } from './i18n';
 import './styles.css';
 
-type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'dashboard' | 'dashCards' | 'dashAttendance' | 'dashPayments' | 'dashSecurity' | 'dashServices' | 'exports' | 'audit' | 'integrity' | 'alerts' | 'incidents' | 'privacy' | 'retention' | 'backups' | 'securitySettings' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
+type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'schoolMap' | 'dashboard' | 'dashCards' | 'dashAttendance' | 'dashPayments' | 'dashSecurity' | 'dashServices' | 'exports' | 'audit' | 'integrity' | 'alerts' | 'incidents' | 'privacy' | 'retention' | 'backups' | 'securitySettings' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
 type NavItem = [Tab, string, boolean];
 type NavGroup = { key: string; label: string; items: NavItem[] };
 type Theme = 'light' | 'dark';
@@ -61,6 +61,7 @@ function App() {
       key: 'admin',
       label: label('groupAdministration'),
       items: [
+        ['schoolMap', label('schoolMap'), can('student:read')],
         ['users', label('users'), can('user:create') || can('user:update')],
         ['roles', label('roles'), can('role:assign')],
         ['permissions', label('permissions'), can('role:assign')],
@@ -191,6 +192,7 @@ function App() {
         {currentTab === 'profile' && <Profile me={me} />}
         {currentTab === 'password' && <PasswordPanel onError={setError} onDone={() => setMe(null)} />}
         {currentTab === 'mfa' && <MfaPanel onError={setError} />}
+        {currentTab === 'schoolMap' && <SchoolMapPanel can={can} onError={setError} />}
         {currentTab === 'users' && <UsersPanel onError={setError} />}
         {currentTab === 'roles' && <TablePanel loader={api.roles} title="Roles" />}
         {currentTab === 'permissions' && <TablePanel loader={api.permissions} title="Permissions" />}
@@ -271,7 +273,23 @@ function Login({ onLogin }: { onLogin: () => Promise<void> }) {
 }
 
 function Profile({ me }: { me: Me }) {
-  return <pre className="panel">{JSON.stringify(me, null, 2)}</pre>;
+  return (
+    <section className="panel stack">
+      <div>
+        <h2>Profil utilisateur</h2>
+        <p>{me.display_name} - {me.username}</p>
+      </div>
+      <section className="grid2">
+        <div className="metric"><span>Roles</span><strong>{me.roles.join(', ')}</strong></div>
+        <div className="metric"><span>Langue</span><strong>{me.preferred_language}</strong></div>
+      </section>
+      <div>
+        <h2>Perimetres rattaches</h2>
+        <DataTable rows={me.scopes} />
+      </div>
+      <p className="hint">Un perimetre NATIONAL donne acces a la vue centrale. Un perimetre REGION, DEPARTMENT ou SCHOOL limite les donnees et les operations aux entites rattachees.</p>
+    </section>
+  );
 }
 
 function PasswordPanel({ onError, onDone }: { onError: (value: string) => void; onDone: () => void }) {
@@ -343,6 +361,236 @@ function ScopesPanel({ onError }: { onError: (value: string) => void }) {
       <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
       <button><UserCog size={18} /> Affecter</button>
     </form>
+  );
+}
+
+function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [hierarchy, setHierarchy] = useState<{ scopes: Array<Record<string, unknown>>; schools: Array<Record<string, unknown>> }>({ scopes: [], schools: [] });
+  const [regions, setRegions] = useState<Array<Record<string, unknown>>>([]);
+  const [departments, setDepartments] = useState<Array<Record<string, unknown>>>([]);
+  const [subdivisions, setSubdivisions] = useState<Array<Record<string, unknown>>>([]);
+  const [classrooms, setClassrooms] = useState<Array<Record<string, unknown>>>([]);
+  const [schoolYears, setSchoolYears] = useState<Array<Record<string, unknown>>>([]);
+  const [gradeLevels, setGradeLevels] = useState<Array<Record<string, unknown>>>([]);
+  const [regionForm, setRegionForm] = useState({ code: '', name: '' });
+  const [departmentForm, setDepartmentForm] = useState({ region_id: '', code: '', name: '' });
+  const [subdivisionForm, setSubdivisionForm] = useState({ department_id: '', code: '', name: '' });
+  const [schoolForm, setSchoolForm] = useState({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'DEMO', status: 'ACTIVE' });
+  const [yearForm, setYearForm] = useState({ code: '', starts_on: '', ends_on: '', status: 'PLANNED' });
+  const [classroomForm, setClassroomForm] = useState({ school_id: '', school_year_id: '', grade_level_id: '', code: '', label: '', capacity: '' });
+  const canManage = can('settings:update');
+
+  async function load() {
+    try {
+      const [nextHierarchy, nextRegions, nextDepartments, nextSubdivisions, nextClassrooms, nextYears, nextGrades] = await Promise.all([
+        api.schoolHierarchy(),
+        api.regions(),
+        api.departments(),
+        api.subdivisions(),
+        api.classrooms(),
+        api.schoolYears(),
+        api.gradeLevels(),
+      ]);
+      setHierarchy(nextHierarchy);
+      setRegions(nextRegions);
+      setDepartments(nextDepartments);
+      setSubdivisions(nextSubdivisions);
+      setClassrooms(nextClassrooms);
+      setSchoolYears(nextYears);
+      setGradeLevels(nextGrades);
+    } catch {
+      onError('Lecture de la carte scolaire refusee');
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
+
+  async function submit(event: React.FormEvent, action: () => Promise<Record<string, unknown>>, reset: () => void) {
+    event.preventDefault();
+    try {
+      await action();
+      reset();
+      await load();
+    } catch {
+      onError('Operation carte scolaire refusee');
+    }
+  }
+
+  return (
+    <section className="stack">
+      <section className="dashboardTopbar">
+        <div>
+          <h2><School size={20} /> Administration de la carte scolaire</h2>
+          <p>Chaine hierarchique : Administration centrale, delegation regionale, delegation departementale, arrondissement/district, etablissement.</p>
+        </div>
+        <button onClick={() => void load()}><RefreshCw size={18} /> Actualiser</button>
+      </section>
+      <section className="panel stack">
+        <h2>Votre perimetre actif</h2>
+        <DataTable rows={hierarchy.scopes} />
+      </section>
+      <section className="panel stack">
+        <h2>Etablissements accessibles</h2>
+        <DataTable rows={hierarchy.schools} />
+      </section>
+      <section className="panel stack">
+        <h2>Graphe hierarchique visible</h2>
+        <SchoolHierarchyGraph rows={hierarchy.schools} />
+      </section>
+      <section className="panel stack">
+        <h2>Classes accessibles</h2>
+        <DataTable rows={classrooms} />
+      </section>
+      {canManage && (
+        <section className="grid2">
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createRegion(regionForm), () => setRegionForm({ code: '', name: '' }))}>
+            <h2>Creer une region</h2>
+            <input placeholder="Code region" value={regionForm.code} onChange={(event) => setRegionForm({ ...regionForm, code: event.target.value })} />
+            <input placeholder="Nom region" value={regionForm.name} onChange={(event) => setRegionForm({ ...regionForm, name: event.target.value })} />
+            <button className="primary">Creer region</button>
+          </form>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createDepartment({ ...departmentForm, region_id: Number(departmentForm.region_id) }), () => setDepartmentForm({ region_id: '', code: '', name: '' }))}>
+            <h2>Creer un departement</h2>
+            <select value={departmentForm.region_id} onChange={(event) => setDepartmentForm({ ...departmentForm, region_id: event.target.value })}>
+              <option value="">Region</option>
+              {regions.map((row) => <option value={String(row.id)} key={String(row.id)}>{String(row.name)} ({String(row.id)})</option>)}
+            </select>
+            <input placeholder="Code departement" value={departmentForm.code} onChange={(event) => setDepartmentForm({ ...departmentForm, code: event.target.value })} />
+            <input placeholder="Nom departement" value={departmentForm.name} onChange={(event) => setDepartmentForm({ ...departmentForm, name: event.target.value })} />
+            <button className="primary">Creer departement</button>
+          </form>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSubdivision({ ...subdivisionForm, department_id: Number(subdivisionForm.department_id) }), () => setSubdivisionForm({ department_id: '', code: '', name: '' }))}>
+            <h2>Creer arrondissement / district</h2>
+            <select value={subdivisionForm.department_id} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, department_id: event.target.value })}>
+              <option value="">Departement</option>
+              {departments.map((row) => <option value={String(row.id)} key={String(row.id)}>{String(row.name)} ({String(row.id)})</option>)}
+            </select>
+            <input placeholder="Code arrondissement" value={subdivisionForm.code} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, code: event.target.value })} />
+            <input placeholder="Nom arrondissement" value={subdivisionForm.name} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, name: event.target.value })} />
+            <button className="primary">Creer arrondissement</button>
+          </form>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSchool({ ...schoolForm, subdivision_id: Number(schoolForm.subdivision_id) }), () => setSchoolForm({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'DEMO', status: 'ACTIVE' }))}>
+            <h2>Creer un etablissement</h2>
+            <select value={schoolForm.subdivision_id} onChange={(event) => setSchoolForm({ ...schoolForm, subdivision_id: event.target.value })}>
+              <option value="">Arrondissement / district</option>
+              {subdivisions.map((row) => <option value={String(row.id)} key={String(row.id)}>{String(row.name)} ({String(row.id)})</option>)}
+            </select>
+            <input placeholder="Code etablissement" value={schoolForm.code} onChange={(event) => setSchoolForm({ ...schoolForm, code: event.target.value })} />
+            <input placeholder="Nom etablissement fictif" value={schoolForm.name} onChange={(event) => setSchoolForm({ ...schoolForm, name: event.target.value })} />
+            <input placeholder="Type" value={schoolForm.school_type} onChange={(event) => setSchoolForm({ ...schoolForm, school_type: event.target.value })} />
+            <button className="primary">Creer etablissement</button>
+          </form>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSchoolYear(yearForm), () => setYearForm({ code: '', starts_on: '', ends_on: '', status: 'PLANNED' }))}>
+            <h2>Creer annee scolaire</h2>
+            <input placeholder="Code, ex. 2027-2028" value={yearForm.code} onChange={(event) => setYearForm({ ...yearForm, code: event.target.value })} />
+            <input type="date" value={yearForm.starts_on} onChange={(event) => setYearForm({ ...yearForm, starts_on: event.target.value })} />
+            <input type="date" value={yearForm.ends_on} onChange={(event) => setYearForm({ ...yearForm, ends_on: event.target.value })} />
+            <button className="primary">Creer annee</button>
+          </form>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createClassroom({ ...classroomForm, school_id: Number(classroomForm.school_id), school_year_id: Number(classroomForm.school_year_id), grade_level_id: Number(classroomForm.grade_level_id), capacity: classroomForm.capacity ? Number(classroomForm.capacity) : undefined }), () => setClassroomForm({ school_id: '', school_year_id: '', grade_level_id: '', code: '', label: '', capacity: '' }))}>
+            <h2>Creer une classe</h2>
+            <select value={classroomForm.school_id} onChange={(event) => setClassroomForm({ ...classroomForm, school_id: event.target.value })}>
+              <option value="">Etablissement</option>
+              {hierarchy.schools.map((row) => <option value={String(row.school_id)} key={String(row.school_id)}>{String(row.school)} ({String(row.school_id)})</option>)}
+            </select>
+            <select value={classroomForm.school_year_id} onChange={(event) => setClassroomForm({ ...classroomForm, school_year_id: event.target.value })}>
+              <option value="">Annee scolaire</option>
+              {schoolYears.map((row) => <option value={String(row.id)} key={String(row.id)}>{String(row.code)} ({String(row.id)})</option>)}
+            </select>
+            <select value={classroomForm.grade_level_id} onChange={(event) => setClassroomForm({ ...classroomForm, grade_level_id: event.target.value })}>
+              <option value="">Niveau</option>
+              {gradeLevels.map((row) => <option value={String(row.id)} key={String(row.id)}>{String(row.label)} ({String(row.id)})</option>)}
+            </select>
+            <input placeholder="Code classe" value={classroomForm.code} onChange={(event) => setClassroomForm({ ...classroomForm, code: event.target.value })} />
+            <input placeholder="Libelle" value={classroomForm.label} onChange={(event) => setClassroomForm({ ...classroomForm, label: event.target.value })} />
+            <input placeholder="Capacite" value={classroomForm.capacity} onChange={(event) => setClassroomForm({ ...classroomForm, capacity: event.target.value })} />
+            <button className="primary">Creer classe</button>
+          </form>
+        </section>
+      )}
+      {!canManage && <section className="panel"><p>Votre role permet la consultation du perimetre, pas la creation des referentiels.</p></section>}
+    </section>
+  );
+}
+
+function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }) {
+  const regions = useMemo(() => {
+    const regionMap = new Map<string, { id: string; label: string; departments: Map<string, { id: string; label: string; subdivisions: Map<string, { id: string; label: string; schools: Array<{ id: string; label: string; code: string; status: string }> }> }> }>();
+    rows.forEach((row) => {
+      const regionId = String(row.region_id ?? 'region-unknown');
+      const departmentId = String(row.department_id ?? 'department-unknown');
+      const subdivisionId = String(row.subdivision_id ?? 'subdivision-unknown');
+      if (!regionMap.has(regionId)) {
+        regionMap.set(regionId, { id: regionId, label: String(row.region ?? 'Region non renseignee'), departments: new Map() });
+      }
+      const region = regionMap.get(regionId)!;
+      if (!region.departments.has(departmentId)) {
+        region.departments.set(departmentId, { id: departmentId, label: String(row.department ?? 'Departement non renseigne'), subdivisions: new Map() });
+      }
+      const department = region.departments.get(departmentId)!;
+      if (!department.subdivisions.has(subdivisionId)) {
+        department.subdivisions.set(subdivisionId, { id: subdivisionId, label: String(row.subdivision ?? 'Arrondissement non renseigne'), schools: [] });
+      }
+      department.subdivisions.get(subdivisionId)!.schools.push({
+        id: String(row.school_id ?? 'school-unknown'),
+        label: String(row.school ?? 'Etablissement non renseigne'),
+        code: String(row.school_code ?? ''),
+        status: String(row.status ?? ''),
+      });
+    });
+    return Array.from(regionMap.values()).map((region) => ({
+      ...region,
+      departments: Array.from(region.departments.values()).map((department) => ({
+        ...department,
+        subdivisions: Array.from(department.subdivisions.values()),
+      })),
+    }));
+  }, [rows]);
+
+  if (!regions.length) return <p>Aucun noeud visible pour ce perimetre.</p>;
+  return (
+    <div className="hierarchyGraph">
+      {regions.map((region) => (
+        <section className="treeNode levelRegion" key={region.id}>
+          <div className="nodeCard">
+            <span>Region</span>
+            <strong>{region.label}</strong>
+            <small>{region.departments.length} departement(s)</small>
+          </div>
+          <div className="treeChildren">
+            {region.departments.map((department) => (
+              <section className="treeNode levelDepartment" key={department.id}>
+                <div className="nodeCard">
+                  <span>Departement</span>
+                  <strong>{department.label}</strong>
+                  <small>{department.subdivisions.length} arrondissement(s) / district(s)</small>
+                </div>
+                <div className="treeChildren">
+                  {department.subdivisions.map((subdivision) => (
+                    <section className="treeNode levelSubdivision" key={subdivision.id}>
+                      <div className="nodeCard">
+                        <span>Arrondissement / district</span>
+                        <strong>{subdivision.label}</strong>
+                        <small>{subdivision.schools.length} etablissement(s)</small>
+                      </div>
+                      <div className="treeChildren schoolLeaves">
+                        {subdivision.schools.map((school) => (
+                          <div className="nodeCard levelSchool" key={school.id}>
+                            <span>Etablissement</span>
+                            <strong>{school.label}</strong>
+                            <small>{school.code} - {school.status}</small>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 
