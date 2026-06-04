@@ -79,3 +79,29 @@ Aucun blocage bloquant pour terminer la phase 0 documentaire.
 - Niveau de granularite initial du RBAC.
 - Choix des bibliotheques frontend de graphiques et formulaires.
 - Version cible des dependances compatibles Windows et MySQL 5.7.
+
+## Phase 1
+
+Statut : realisee pour les livrables demandes par l'utilisateur.
+
+Fichiers produits :
+
+- `docs/ARCHITECTURE.md`
+- `docs/DATA_MODEL_DRAFT.md`
+- `docs/ER_DIAGRAM.md`
+
+Contenu couvert :
+
+- Architecture applicative cible.
+- Separation frontend, backend, base de donnees et scripts.
+- Contraintes MySQL 5.7.
+- Principes de securite, RBAC, sessions, audit et QR.
+- Modele relationnel logique.
+- Diagramme Mermaid ER.
+
+Non realise volontairement :
+
+- Pas de creation de base.
+- Pas de migration Alembic.
+- Pas de SQL executable.
+- Pas d'installation de dependances.

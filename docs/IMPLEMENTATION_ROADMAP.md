@@ -46,10 +46,10 @@ npx.cmd eslint .
 
 Actions proposees :
 
-1. Finaliser l'arborescence du depot.
-2. Produire `docs/ARCHITECTURE.md`.
-3. Produire un premier schema relationnel logique.
-4. Produire le diagramme entite-association Mermaid.
+1. Finaliser l'arborescence du depot. Statut : documente dans `docs/ARCHITECTURE.md`.
+2. Produire `docs/ARCHITECTURE.md`. Statut : realise.
+3. Produire un premier schema relationnel logique. Statut : realise dans `docs/DATA_MODEL_DRAFT.md`.
+4. Produire le diagramme entite-association Mermaid. Statut : realise dans `docs/ER_DIAGRAM.md`.
 5. Produire la matrice initiale roles-permissions.
 6. Definir les decisions sensibles : sessions, CSRF, Argon2id, MFA, audit, QR, mocks.
 7. Documenter les hypotheses metier et juridiques.
@@ -60,6 +60,10 @@ Livrables attendus :
 - `docs/RBAC_MATRIX.md`
 - `docs/DATA_MODEL_DRAFT.md`
 - `docs/SECURITY_DECISIONS.md`
+
+Livrables ajoutes pendant cette phase :
+
+- `docs/ER_DIAGRAM.md`
 
 ## Phase 2 - Base de donnees
 
