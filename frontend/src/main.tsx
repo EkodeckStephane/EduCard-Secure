@@ -514,28 +514,42 @@ function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean
 }
 
 function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }) {
+  const [visible, setVisible] = useState(true);
+  const [selectedNode, setSelectedNode] = useState<Record<string, unknown> | null>(null);
   const regions = useMemo(() => {
-    const regionMap = new Map<string, { id: string; label: string; departments: Map<string, { id: string; label: string; subdivisions: Map<string, { id: string; label: string; schools: Array<{ id: string; label: string; code: string; status: string }> }> }> }>();
+    const regionMap = new Map<string, { id: string; label: string; details: Record<string, unknown>; departments: Map<string, { id: string; label: string; details: Record<string, unknown>; subdivisions: Map<string, { id: string; label: string; details: Record<string, unknown>; schools: Array<{ id: string; label: string; code: string; status: string; details: Record<string, unknown> }> }> }> }>();
     rows.forEach((row) => {
       const regionId = String(row.region_id ?? 'region-unknown');
       const departmentId = String(row.department_id ?? 'department-unknown');
       const subdivisionId = String(row.subdivision_id ?? 'subdivision-unknown');
       if (!regionMap.has(regionId)) {
-        regionMap.set(regionId, { id: regionId, label: String(row.region ?? 'Region non renseignee'), departments: new Map() });
+        regionMap.set(regionId, { id: regionId, label: String(row.region ?? 'Region non renseignee'), details: { type: 'Region', id: regionId, nom: row.region }, departments: new Map() });
       }
       const region = regionMap.get(regionId)!;
       if (!region.departments.has(departmentId)) {
-        region.departments.set(departmentId, { id: departmentId, label: String(row.department ?? 'Departement non renseigne'), subdivisions: new Map() });
+        region.departments.set(departmentId, { id: departmentId, label: String(row.department ?? 'Departement non renseigne'), details: { type: 'Departement', id: departmentId, nom: row.department, region: row.region }, subdivisions: new Map() });
       }
       const department = region.departments.get(departmentId)!;
       if (!department.subdivisions.has(subdivisionId)) {
-        department.subdivisions.set(subdivisionId, { id: subdivisionId, label: String(row.subdivision ?? 'Arrondissement non renseigne'), schools: [] });
+        department.subdivisions.set(subdivisionId, { id: subdivisionId, label: String(row.subdivision ?? 'Arrondissement non renseigne'), details: { type: 'Arrondissement / district', id: subdivisionId, nom: row.subdivision, departement: row.department, region: row.region }, schools: [] });
       }
       department.subdivisions.get(subdivisionId)!.schools.push({
         id: String(row.school_id ?? 'school-unknown'),
         label: String(row.school ?? 'Etablissement non renseigne'),
         code: String(row.school_code ?? ''),
         status: String(row.status ?? ''),
+        details: {
+          type: 'Etablissement',
+          id: row.school_id,
+          code: row.school_code,
+          nom: row.school,
+          statut: row.status,
+          type_etablissement: row.school_type,
+          sous_systeme: row.education_subsystem,
+          arrondissement: row.subdivision,
+          departement: row.department,
+          region: row.region,
+        },
       });
     });
     return Array.from(regionMap.values()).map((region) => ({
@@ -549,37 +563,34 @@ function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }
 
   if (!regions.length) return <p>Aucun noeud visible pour ce perimetre.</p>;
   return (
-    <div className="hierarchyGraph">
-      {regions.map((region) => (
-        <section className="treeNode levelRegion" key={region.id}>
-          <div className="nodeCard">
-            <span>Region</span>
-            <strong>{region.label}</strong>
-            <small>{region.departments.length} departement(s)</small>
-          </div>
-          <div className="treeChildren">
-            {region.departments.map((department) => (
-              <section className="treeNode levelDepartment" key={department.id}>
-                <div className="nodeCard">
-                  <span>Departement</span>
-                  <strong>{department.label}</strong>
-                  <small>{department.subdivisions.length} arrondissement(s) / district(s)</small>
-                </div>
-                <div className="treeChildren">
-                  {department.subdivisions.map((subdivision) => (
-                    <section className="treeNode levelSubdivision" key={subdivision.id}>
-                      <div className="nodeCard">
-                        <span>Arrondissement / district</span>
-                        <strong>{subdivision.label}</strong>
-                        <small>{subdivision.schools.length} etablissement(s)</small>
-                      </div>
-                      <div className="treeChildren schoolLeaves">
-                        {subdivision.schools.map((school) => (
-                          <div className="nodeCard levelSchool" key={school.id}>
-                            <span>Etablissement</span>
-                            <strong>{school.label}</strong>
-                            <small>{school.code} - {school.status}</small>
-                          </div>
+    <div className="graphFrame">
+      <div className="graphFrameHeader">
+        <div>
+          <h3>Graphe des noeuds administratifs</h3>
+          <p>Clique sur un noeud rond pour afficher ses informations.</p>
+        </div>
+        <button onClick={() => setVisible(!visible)}>{visible ? 'Masquer le graphe' : 'Afficher le graphe'}</button>
+      </div>
+      {visible && (
+        <div className="graphFrameBody">
+          <div className="hierarchyGraph">
+            {regions.map((region) => (
+              <section className="graphLevel" key={region.id}>
+                <GraphNode label={region.label} type="Region" count={`${region.departments.length} dep.`} level="region" onClick={() => setSelectedNode(region.details)} />
+                <div className="graphChildren">
+                  {region.departments.map((department) => (
+                    <section className="graphLevel" key={department.id}>
+                      <GraphNode label={department.label} type="Departement" count={`${department.subdivisions.length} arr.`} level="department" onClick={() => setSelectedNode(department.details)} />
+                      <div className="graphChildren">
+                        {department.subdivisions.map((subdivision) => (
+                          <section className="graphLevel" key={subdivision.id}>
+                            <GraphNode label={subdivision.label} type="Arrondissement" count={`${subdivision.schools.length} etab.`} level="subdivision" onClick={() => setSelectedNode(subdivision.details)} />
+                            <div className="graphChildren schoolLeaves">
+                              {subdivision.schools.map((school) => (
+                                <GraphNode key={school.id} label={school.label} type="Etablissement" count={school.code} level="school" onClick={() => setSelectedNode(school.details)} />
+                              ))}
+                            </div>
+                          </section>
                         ))}
                       </div>
                     </section>
@@ -588,9 +599,23 @@ function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }
               </section>
             ))}
           </div>
-        </section>
-      ))}
+          <aside className="nodeDetails">
+            <h3>Informations du noeud</h3>
+            {selectedNode ? <DataTable rows={[selectedNode]} /> : <p>Aucun noeud selectionne.</p>}
+          </aside>
+        </div>
+      )}
     </div>
+  );
+}
+
+function GraphNode({ label, type, count, level, onClick }: { label: string; type: string; count: string; level: string; onClick: () => void }) {
+  return (
+    <button className={`graphNode ${level}`} onClick={onClick} title={`${type}: ${label}`}>
+      <span>{type}</span>
+      <strong>{label}</strong>
+      <small>{count}</small>
+    </button>
   );
 }
 
