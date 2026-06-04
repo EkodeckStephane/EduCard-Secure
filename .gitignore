@@ -1,0 +1,53 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+
+# Local runtime data
+logs/
+uploads/
+exports/
+backups/
+tmp/
+*.log
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Secrets and keys
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+private/
+
+# Database artifacts
+*.sql.gz
+*.dump
+*.bak
+
