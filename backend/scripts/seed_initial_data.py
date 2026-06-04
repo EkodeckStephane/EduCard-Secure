@@ -1,6 +1,10 @@
 from datetime import date
+from pathlib import Path
+import sys
 
 from sqlalchemy import select
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.database import SessionLocal
 from app.models.entities import (
@@ -8,7 +12,6 @@ from app.models.entities import (
     GradeLevel,
     PaymentProvider,
     Permission,
-    Region,
     Role,
     RolePermission,
     SchoolYear,
@@ -115,8 +118,7 @@ def main() -> None:
 
         get_or_create(session, SchoolYear, code="2026-2027", defaults={"starts_on": date(2026, 9, 1), "ends_on": date(2027, 7, 31), "status": "PLANNED"})
         for idx, label in enumerate(["6e", "5e", "4e", "3e", "2nde", "1ere", "Terminale"], start=1):
-            get_or_create(session, GradeLevel, code=label.upper(), defaults={"label": label, "education_subsystem": "DEMO", "sort_order": idx})
-        get_or_create(session, Region, code="DEMO-CENTRAL", defaults={"name": "Region Demo Centrale", "is_demo": True})
+            get_or_create(session, GradeLevel, code=label.upper(), defaults={"label": label, "education_subsystem": "GENERAL_FR", "sort_order": idx})
         get_or_create(session, ConfigurationSetting, setting_key="demo_data_enabled", defaults={"setting_value_encrypted": "true", "is_sensitive": False})
 
         session.commit()

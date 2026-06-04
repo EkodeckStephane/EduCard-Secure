@@ -375,7 +375,7 @@ function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean
   const [regionForm, setRegionForm] = useState({ code: '', name: '', capital: '' });
   const [departmentForm, setDepartmentForm] = useState({ region_id: '', code: '', name: '', capital: '' });
   const [subdivisionForm, setSubdivisionForm] = useState({ department_id: '', code: '', name: '', capital: '' });
-  const [schoolForm, setSchoolForm] = useState({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'DEMO', status: 'ACTIVE' });
+  const [schoolForm, setSchoolForm] = useState({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'GENERAL_FR', status: 'ACTIVE' });
   const [yearForm, setYearForm] = useState({ code: '', starts_on: '', ends_on: '', status: 'PLANNED' });
   const [classroomForm, setClassroomForm] = useState({ school_id: '', school_year_id: '', grade_level_id: '', code: '', label: '', capacity: '' });
   const canManage = can('settings:update');
@@ -472,14 +472,14 @@ function SchoolMapPanel({ can, onError }: { can: (permission: string) => boolean
             <input placeholder="Chef-lieu" value={subdivisionForm.capital} onChange={(event) => setSubdivisionForm({ ...subdivisionForm, capital: event.target.value })} />
             <button className="primary">Creer arrondissement</button>
           </form>
-          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSchool({ ...schoolForm, subdivision_id: Number(schoolForm.subdivision_id) }), () => setSchoolForm({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'DEMO', status: 'ACTIVE' }))}>
+          <form className="panel formGrid" onSubmit={(event) => submit(event, () => api.createSchool({ ...schoolForm, subdivision_id: Number(schoolForm.subdivision_id) }), () => setSchoolForm({ subdivision_id: '', code: '', name: '', school_type: 'GENERAL', education_subsystem: 'GENERAL_FR', status: 'ACTIVE' }))}>
             <h2>Creer un etablissement</h2>
             <select value={schoolForm.subdivision_id} onChange={(event) => setSchoolForm({ ...schoolForm, subdivision_id: event.target.value })}>
               <option value="">Arrondissement / district</option>
               {subdivisions.map((row) => <option value={String(row.id)} key={String(row.id)}>{String(row.name)} ({String(row.id)})</option>)}
             </select>
             <input placeholder="Code etablissement" value={schoolForm.code} onChange={(event) => setSchoolForm({ ...schoolForm, code: event.target.value })} />
-            <input placeholder="Nom etablissement fictif" value={schoolForm.name} onChange={(event) => setSchoolForm({ ...schoolForm, name: event.target.value })} />
+            <input placeholder="Nom d'etablissement fictif" value={schoolForm.name} onChange={(event) => setSchoolForm({ ...schoolForm, name: event.target.value })} />
             <input placeholder="Type" value={schoolForm.school_type} onChange={(event) => setSchoolForm({ ...schoolForm, school_type: event.target.value })} />
             <button className="primary">Creer etablissement</button>
           </form>
@@ -838,7 +838,7 @@ function IncidentsPanel({ can, onError }: { can: (permission: string) => boolean
   useEffect(() => { void load(); }, []);
   return (
     <section className="stack">
-      {can('incident:create') && <button className="primary" onClick={() => api.createIncident({ category: 'DEMO_SECURITY', priority: 'MEDIUM', severity: 'MEDIUM', comment: 'Incident fictif' }).then(load).catch(() => onError('Creation incident refusee'))}>Creer incident</button>}
+      {can('incident:create') && <button className="primary" onClick={() => api.createIncident({ category: 'ACCES_HORS_PERIMETRE_SIMULE', priority: 'MEDIUM', severity: 'MEDIUM', comment: 'Incident fictif de securite' }).then(load).catch(() => onError('Creation incident refusee'))}>Creer incident</button>}
       <div className="panel"><DataTable rows={rows} onRow={(row) => setSelected(String(row.id ?? ''))} /></div>
       {can('incident:update') && <div className="toolbar"><input placeholder="ID incident" value={selected} onChange={(event) => setSelected(event.target.value)} /><button onClick={() => api.updateIncident(Number(selected), { status: 'RESOLVED', comment: 'Resolution fictive' }).then(load).catch(() => onError('Resolution refusee'))}>Resoudre</button></div>}
     </section>
@@ -860,7 +860,7 @@ function PrivacyPanel({ can, onError }: { can: (permission: string) => boolean; 
   return (
     <section className="grid2">
       <section className="panel"><h2>Demandes</h2>{can('privacy:update') && <button onClick={() => api.createPrivacyRequest({ request_type: 'ACCESS', subject_type: 'STUDENT' }).then(load).catch(() => onError('Creation demande refusee'))}>Nouvelle demande</button>}<DataTable rows={requests} /></section>
-      <section className="panel"><h2>Registre</h2>{can('privacy:update') && <button onClick={() => api.createProcessingRegister({ processing_name: `Traitement demo ${Date.now()}`, purpose: 'Demo', data_categories: 'Donnees synthetiques' }).then(load).catch(() => onError('Creation registre refusee'))}>Ajouter traitement</button>}<DataTable rows={register} /></section>
+      <section className="panel"><h2>Registre</h2>{can('privacy:update') && <button onClick={() => api.createProcessingRegister({ processing_name: `Traitement fictif ${Date.now()}`, purpose: 'Demonstration locale avec donnees synthetiques', data_categories: 'Donnees synthetiques' }).then(load).catch(() => onError('Creation registre refusee'))}>Ajouter traitement</button>}<DataTable rows={register} /></section>
     </section>
   );
 }
@@ -1256,7 +1256,7 @@ function PaymentsPanel({ can, onError }: { can: (permission: string) => boolean;
             provider_code: 'MOCK_MOMO',
             idempotency_key: `ui-${Date.now()}`,
             amount: 1500,
-            category: 'DEMO_FEES',
+            category: 'CONTRIBUTION_SCOLAIRE_SIMULEE',
             school_id: Number(schoolId),
             school_year_id: Number(schoolYearId),
             student_id: studentId ? Number(studentId) : undefined,

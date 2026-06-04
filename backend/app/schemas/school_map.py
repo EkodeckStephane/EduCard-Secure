@@ -28,7 +28,7 @@ class SchoolCreateRequest(BaseModel):
     code: str = Field(min_length=2, max_length=60)
     name: str = Field(min_length=2, max_length=180)
     school_type: str = Field(default="GENERAL", max_length=80)
-    education_subsystem: str = Field(default="DEMO", max_length=80)
+    education_subsystem: str = Field(default="GENERAL_FR", max_length=80)
     status: str = Field(default="ACTIVE", max_length=40)
 
 

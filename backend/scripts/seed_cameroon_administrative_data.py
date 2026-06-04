@@ -169,7 +169,7 @@ def main() -> None:
                 session,
                 Region,
                 code=region_data["code"],
-                defaults={"name": region_data["name"], "capital": region_data["capital"], "is_demo": True},
+                defaults={"name": region_data["name"], "capital": region_data["capital"], "is_demo": False},
             )
             region_count += 1
             for department_code, department_name, department_capital, subdivisions in region_data["departments"]:
@@ -178,7 +178,7 @@ def main() -> None:
                     Department,
                     region_id=region.id,
                     code=department_code,
-                    defaults={"name": department_name, "capital": department_capital, "is_demo": True},
+                    defaults={"name": department_name, "capital": department_capital, "is_demo": False},
                 )
                 department_count += 1
                 for subdivision_name in subdivisions:
@@ -187,7 +187,7 @@ def main() -> None:
                         Subdivision,
                         department_id=department.id,
                         code=slug(subdivision_name),
-                        defaults={"name": subdivision_name, "capital": subdivision_name, "is_demo": True},
+                        defaults={"name": subdivision_name, "capital": subdivision_name, "is_demo": False},
                     )
                     subdivision_count += 1
         session.commit()

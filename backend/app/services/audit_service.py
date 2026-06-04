@@ -72,6 +72,7 @@ def append_audit_event(
     )
     db.add(event)
     db.flush()
+    db.refresh(event)
     digest = hashlib.sha256(_event_material(event, previous_hash).encode("utf-8")).hexdigest()
     db.add(AuditEventHash(audit_event_id=event.id, previous_hash=previous_hash, event_hash=digest, hash_algorithm="SHA-256"))
     return event
