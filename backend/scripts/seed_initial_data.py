@@ -60,6 +60,10 @@ PERMISSIONS = [
     ("dashboard:read", "dashboard", "read"),
     ("export:create", "export", "create"),
     ("export:download", "export", "download"),
+    ("privacy:read", "privacy", "read"),
+    ("privacy:update", "privacy", "update"),
+    ("backup:read", "backup", "read"),
+    ("security:read", "security", "read"),
 ]
 
 

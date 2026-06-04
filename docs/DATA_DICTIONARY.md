@@ -63,6 +63,16 @@
 | backup_events | Backup and restore events | File reference only |
 | notification_events | Local notification events | No external messaging by default |
 
+## Phase 7 Field Notes
+
+- `audit_events` and `audit_event_hashes`: chained audit log; integrity can be checked by recomputing hashes.
+- `security_events`: source for local alert views; high and critical severities become actionable alerts.
+- `incidents` and `incident_events`: incident workflow and minimized history.
+- `data_access_requests`: prototype privacy request tracking.
+- `data_processing_register`: processing register entries requiring legal validation.
+- `retention_rules`: draft technical records; no automatic deletion in phase 7.
+- `backup_events`: API read model for backup/restore events; PowerShell backup scripts also produce filesystem hashes.
+
 ## MySQL 5.7 notes
 
 Status transitions, one-active-card rules and coherent scopes are enforced by application services and tests because MySQL 5.7 CHECK constraints are not relied upon.

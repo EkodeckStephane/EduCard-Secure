@@ -22,6 +22,13 @@ Behavior:
 - Uses `--no-tablespaces` so the dedicated application account does not need the global `PROCESS` privilege.
 - Writes to `backups\educard_secure_yyyyMMdd_HHmmss.sql`.
 - Refuses to overwrite an existing file unless confirmed.
+- Calculates a SHA-256 sidecar file `<backup>.sha256`.
+
+Non-interactive local test mode reads the ignored `.env` file:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup_database.ps1 -UseEnvFile
+```
 
 ## Restore
 
@@ -34,6 +41,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\restore_database.p
 Behavior:
 
 - Requires explicit `RESTORE-EDUCARD` confirmation.
+- Verifies `<backup>.sha256` first when present.
 - Restores into `educard_secure`.
 - Does not drop any database by itself.
 - Must be reviewed before use because restore may overwrite data inside the target schema.
@@ -49,3 +57,22 @@ Behavior:
 
 Backup can be tested only after the database exists and credentials are configured locally.
 Restore must not be tested without explicit authorization.
+
+## Listing and verification
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\list_backups.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify_backup.ps1 -BackupFile .\backups\educard_secure_YYYYMMDD_HHMMSS.sql
+```
+
+## What Is Not Modified
+
+- MySQL service configuration.
+- MySQL port.
+- Global MySQL variables.
+- Existing unrelated databases.
+
+## Legal And Operational Validation
+
+Production backup retention, encryption, access control, offsite storage and
+restore drills require institutional approval and legal validation.

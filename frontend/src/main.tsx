@@ -4,7 +4,7 @@ import { CreditCard, FileClock, KeyRound, LogOut, RefreshCw, School, ShieldCheck
 import { api, Card, Me, setCsrf, Student } from './api';
 import './styles.css';
 
-type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'dashboard' | 'dashCards' | 'dashAttendance' | 'dashPayments' | 'dashSecurity' | 'dashServices' | 'exports' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
+type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'dashboard' | 'dashCards' | 'dashAttendance' | 'dashPayments' | 'dashSecurity' | 'dashServices' | 'exports' | 'audit' | 'integrity' | 'alerts' | 'incidents' | 'privacy' | 'retention' | 'backups' | 'securitySettings' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
 
 function App() {
   const [me, setMe] = useState<Me | null>(null);
@@ -45,6 +45,14 @@ function App() {
     ['dashSecurity', 'Stats securite', can('dashboard:read')],
     ['dashServices', 'Stats services', can('dashboard:read')],
     ['exports', 'Exports', can('export:create') || can('export:download')],
+    ['audit', 'Audit', can('audit:read')],
+    ['integrity', 'Integrite', can('audit:read')],
+    ['alerts', 'Alertes', can('security:read')],
+    ['incidents', 'Incidents', can('incident:update') || can('incident:create')],
+    ['privacy', 'Donnees', can('privacy:read') || can('privacy:update')],
+    ['retention', 'Retention', can('privacy:read') || can('privacy:update')],
+    ['backups', 'Sauvegardes', can('backup:read')],
+    ['securitySettings', 'Securite', can('security:read')],
     ['students', 'Eleves', can('student:read')],
     ['studentForm', 'Nouvel eleve', can('student:create')],
     ['enrollments', 'Inscriptions', can('student:update')],
@@ -105,6 +113,14 @@ function App() {
         {tab === 'dashSecurity' && <DistributionPanel title="Securite" loader={api.dashboardSecurity} onError={setError} />}
         {tab === 'dashServices' && <DistributionPanel title="Services" loader={api.dashboardServices} onError={setError} />}
         {tab === 'exports' && <ExportsPanel can={can} onError={setError} />}
+        {tab === 'audit' && <AuditPanel onError={setError} />}
+        {tab === 'integrity' && <IntegrityPanel onError={setError} />}
+        {tab === 'alerts' && <AlertsPanel onError={setError} />}
+        {tab === 'incidents' && <IncidentsPanel can={can} onError={setError} />}
+        {tab === 'privacy' && <PrivacyPanel can={can} onError={setError} />}
+        {tab === 'retention' && <RetentionPanel can={can} onError={setError} />}
+        {tab === 'backups' && <BackupsPanel onError={setError} />}
+        {tab === 'securitySettings' && <SecuritySettingsPanel />}
         {tab === 'students' && <StudentsPanel can={can} onError={setError} />}
         {tab === 'studentForm' && <StudentForm onError={setError} />}
         {tab === 'enrollments' && <EnrollmentPanel onError={setError} />}
@@ -324,6 +340,82 @@ function ExportsPanel({ can, onError }: { can: (permission: string) => boolean; 
       )}
     </section>
   );
+}
+
+function AuditPanel({ onError }: { onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  useEffect(() => { api.auditEvents().then(setRows).catch(() => onError('Lecture audit refusee')); }, [onError]);
+  return <section className="panel"><h2>Audit</h2><DataTable rows={rows} /></section>;
+}
+
+function IntegrityPanel({ onError }: { onError: (value: string) => void }) {
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  useEffect(() => { api.auditIntegrity().then(setResult).catch(() => onError('Verification integrite refusee')); }, [onError]);
+  return <section className="panel"><h2>Integrite audit</h2><pre>{JSON.stringify(result, null, 2)}</pre></section>;
+}
+
+function AlertsPanel({ onError }: { onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  async function load() {
+    try { setRows(await api.alerts()); } catch { onError('Lecture alertes refusee'); }
+  }
+  useEffect(() => { void load(); }, []);
+  return <section className="panel"><h2>Alertes</h2><DataTable rows={rows} onRow={(row) => api.acknowledgeAlert(Number(row.id)).then(load).catch(() => onError('Accuse refuse'))} /></section>;
+}
+
+function IncidentsPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [selected, setSelected] = useState('');
+  async function load() {
+    try { setRows(await api.incidents()); } catch { onError('Lecture incidents refusee'); }
+  }
+  useEffect(() => { void load(); }, []);
+  return (
+    <section className="stack">
+      {can('incident:create') && <button className="primary" onClick={() => api.createIncident({ category: 'DEMO_SECURITY', priority: 'MEDIUM', severity: 'MEDIUM', comment: 'Incident fictif' }).then(load).catch(() => onError('Creation incident refusee'))}>Creer incident</button>}
+      <div className="panel"><DataTable rows={rows} onRow={(row) => setSelected(String(row.id ?? ''))} /></div>
+      {can('incident:update') && <div className="toolbar"><input placeholder="ID incident" value={selected} onChange={(event) => setSelected(event.target.value)} /><button onClick={() => api.updateIncident(Number(selected), { status: 'RESOLVED', comment: 'Resolution fictive' }).then(load).catch(() => onError('Resolution refusee'))}>Resoudre</button></div>}
+    </section>
+  );
+}
+
+function PrivacyPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [requests, setRequests] = useState<Array<Record<string, unknown>>>([]);
+  const [register, setRegister] = useState<Array<Record<string, unknown>>>([]);
+  async function load() {
+    try {
+      setRequests(await api.privacyRequests());
+      setRegister(await api.processingRegister());
+    } catch {
+      onError('Lecture donnees privacy refusee');
+    }
+  }
+  useEffect(() => { void load(); }, []);
+  return (
+    <section className="grid2">
+      <section className="panel"><h2>Demandes</h2>{can('privacy:update') && <button onClick={() => api.createPrivacyRequest({ request_type: 'ACCESS', subject_type: 'STUDENT' }).then(load).catch(() => onError('Creation demande refusee'))}>Nouvelle demande</button>}<DataTable rows={requests} /></section>
+      <section className="panel"><h2>Registre</h2>{can('privacy:update') && <button onClick={() => api.createProcessingRegister({ processing_name: `Traitement demo ${Date.now()}`, purpose: 'Demo', data_categories: 'Donnees synthetiques' }).then(load).catch(() => onError('Creation registre refusee'))}>Ajouter traitement</button>}<DataTable rows={register} /></section>
+    </section>
+  );
+}
+
+function RetentionPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  async function load() {
+    try { setRows(await api.retentionRules()); } catch { onError('Lecture retention refusee'); }
+  }
+  useEffect(() => { void load(); }, []);
+  return <section className="panel"><h2>Retention</h2>{can('privacy:update') && <button onClick={() => api.createRetentionRule({ resource_type: `demo-${Date.now()}`, retention_period_days: 30 }).then(load).catch(() => onError('Creation regle refusee'))}>Ajouter regle</button>}<DataTable rows={rows} /></section>;
+}
+
+function BackupsPanel({ onError }: { onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  useEffect(() => { api.backups().then(setRows).catch(() => onError('Lecture sauvegardes refusee')); }, [onError]);
+  return <section className="panel"><h2>Sauvegardes</h2><DataTable rows={rows} /></section>;
+}
+
+function SecuritySettingsPanel() {
+  return <section className="panel"><h2>Parametres securite</h2><DataTable rows={[{ controle: 'CSRF', statut: 'actif' }, { controle: 'Cookies HttpOnly', statut: 'actif' }, { controle: 'Headers securite', statut: 'actif' }, { controle: 'Biometrie', statut: 'desactivee' }]} /></section>;
 }
 
 function StudentsPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {

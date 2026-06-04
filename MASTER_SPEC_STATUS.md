@@ -259,3 +259,42 @@ Verifie :
 - Build frontend : reussi.
 - Lint frontend : reussi.
 - Scenario de filtrage, scope, export, telechargement et logs couvert par tests phase 6.
+
+## Phase 7
+
+Statut : backend, frontend, scripts et documentation de phase 7 implementes et valides.
+
+Fichiers produits ou completes :
+
+- Audit chaine SHA-256, verification d'integrite et detection de rupture.
+- Alertes derivees des evenements de securite.
+- Incidents avec historique.
+- Demandes privacy, registre des traitements et regles de retention.
+- Scripts sauvegarde/restauration renforces avec empreinte SHA-256.
+- Documentation security, privacy, menaces, audit, alerting, incidents, sauvegardes et validations legales.
+
+Contraintes respectees :
+
+- Aucune restauration executee.
+- Aucune suppression de donnees.
+- Aucune modification de l'installation MySQL.
+- Donnees fictives uniquement.
+- Aucune validation juridique definitive.
+
+Verifie :
+
+- Alembic `upgrade head` idempotent.
+- Tests backend : 19 passes.
+- Tests frontend : 1 passe.
+- Lint frontend : reussi.
+- Build frontend : reussi.
+- Creation d'une sauvegarde locale et verification de son empreinte SHA-256.
+- Test de chaine d'audit et d'alteration simulee couvert par tests phase 7.
+- Scan simple du depot pour secrets : seulement placeholders documentaires.
+- `git ls-files backups private exports logs secrets *.pem *.key` : aucun fichier sensible suivi par Git.
+
+Non realise volontairement :
+
+- Aucune restauration de sauvegarde.
+- Aucune suppression de donnees.
+- Aucune validation juridique definitive.

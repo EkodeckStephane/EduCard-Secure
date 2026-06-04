@@ -98,4 +98,22 @@ Small counts are masked as `MASKED`.
 
 `INDIVIDUAL_STUDENT` exports additionally require `student:export`.
 
+## Security Operations
+
+- `POST /audit/events`: requires `audit:read`, CSRF; appends a chained audit event.
+- `GET /audit/events`: requires `audit:read`; supports simple filters.
+- `GET /audit/integrity`: requires `audit:read`; verifies hash chain integrity.
+- `GET /alerts`: requires `security:read`; lists high and critical security events as alerts.
+- `POST /alerts/{id}/ack`: requires `security:read`, CSRF; acknowledges an alert.
+- `GET /incidents`: requires `incident:update`.
+- `POST /incidents`: requires `incident:create`, CSRF.
+- `PATCH /incidents/{id}`: requires `incident:update`, CSRF.
+- `GET /privacy/requests`: requires `privacy:read`.
+- `POST /privacy/requests`: requires `privacy:update`, CSRF.
+- `GET /privacy/register`: requires `privacy:read`.
+- `POST /privacy/register`: requires `privacy:update`, CSRF.
+- `GET /privacy/retention`: requires `privacy:read`.
+- `POST /privacy/retention`: requires `privacy:update`, CSRF.
+- `GET /backups`: requires `backup:read`.
+
 OpenAPI is available at `/docs` when the FastAPI app is running.

@@ -1,14 +1,27 @@
-$ErrorActionPreference = "Stop"
-
 param(
     [Parameter(Mandatory=$true)]
     [string]$BackupFile
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 $mysql = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe"
 
 if (-not (Test-Path -LiteralPath $BackupFile)) {
     throw "Backup file not found: $BackupFile"
+}
+
+$hashFile = "$BackupFile.sha256"
+if (Test-Path -LiteralPath $hashFile) {
+    $expected = ((Get-Content -LiteralPath $hashFile -Raw) -split "\s+")[0]
+    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $BackupFile).Hash
+    if ($actual -ne $expected) {
+        throw "Backup hash verification failed."
+    }
+    Write-Host "Backup hash verified."
+} else {
+    Write-Host "No .sha256 file found. Continue only after manual verification."
 }
 
 Write-Host "Restore is sensitive and may overwrite data inside the educard_secure database."
