@@ -7,6 +7,39 @@ export type Me = {
   scopes: Array<Record<string, unknown>>;
 };
 
+export type Student = {
+  id: number;
+  public_id: string;
+  student_number: string;
+  last_name: string;
+  first_name: string;
+  birth_date: string;
+  status: string;
+  current_school_id: number | null;
+  current_classroom_id: number | null;
+  record_version: number;
+};
+
+export type StudentList = {
+  items: Student[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type Card = {
+  id: number;
+  public_id: string;
+  student_id: number;
+  serial_number: string;
+  card_version: number;
+  status: string;
+  issued_at: string | null;
+  activated_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+};
+
 let csrfToken = '';
 
 export function setCsrf(token: string) {
@@ -51,4 +84,18 @@ export const api = {
   createUser: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/users', { method: 'POST', body: JSON.stringify(payload) }),
   assignScope: (id: number, payload: Record<string, unknown>) =>
     request<Record<string, unknown>>(`/api/v1/users/${id}/scopes`, { method: 'POST', body: JSON.stringify(payload) }),
+  students: (params = '') => request<StudentList>(`/api/v1/students${params}`),
+  student: (id: number) => request<Student>(`/api/v1/students/${id}`),
+  createStudent: (payload: Record<string, unknown>) => request<Student>('/api/v1/students', { method: 'POST', body: JSON.stringify(payload) }),
+  updateStudent: (id: number, payload: Record<string, unknown>) => request<Student>(`/api/v1/students/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  archiveStudent: (id: number) => request<Student>(`/api/v1/students/${id}/archive`, { method: 'POST' }),
+  studentHistory: (id: number) => request<Array<Record<string, unknown>>>(`/api/v1/students/${id}/history`),
+  duplicateCandidates: (id: number) => request<Array<Record<string, unknown>>>(`/api/v1/students/${id}/duplicate-candidates`),
+  enroll: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/enrollments', { method: 'POST', body: JSON.stringify(payload) }),
+  transfer: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/transfers', { method: 'POST', body: JSON.stringify(payload) }),
+  cards: () => request<Card[]>('/api/v1/cards'),
+  card: (id: number) => request<Card>(`/api/v1/cards/${id}`),
+  createCard: (payload: Record<string, unknown>) => request<Card>('/api/v1/cards', { method: 'POST', body: JSON.stringify(payload) }),
+  cardAction: (id: number, action: string, reason: string) => request<Card>(`/api/v1/cards/${id}/${action}`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  cardHistory: (id: number) => request<Record<string, Array<Record<string, unknown>>>>(`/api/v1/cards/${id}/history`),
 };

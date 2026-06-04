@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { KeyRound, LogOut, RefreshCw, ShieldCheck, UserCog, UsersRound } from 'lucide-react';
-import { api, Me, setCsrf } from './api';
+import { CreditCard, FileClock, KeyRound, LogOut, RefreshCw, School, ShieldCheck, UserCog, UsersRound } from 'lucide-react';
+import { api, Card, Me, setCsrf, Student } from './api';
 import './styles.css';
 
-type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions';
+type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'students' | 'studentForm' | 'enrollments' | 'cards';
 
 function App() {
   const [me, setMe] = useState<Me | null>(null);
@@ -28,15 +28,20 @@ function App() {
     return <Login onLogin={loadMe} />;
   }
 
-  const tabs: Array<[Tab, string]> = [
-    ['profile', 'Profil'],
-    ['password', 'Mot de passe'],
-    ['mfa', 'MFA'],
-    ['users', 'Utilisateurs'],
-    ['roles', 'Roles'],
-    ['permissions', 'Permissions'],
-    ['scopes', 'Perimetres'],
-    ['sessions', 'Sessions'],
+  const can = (permission: string) => me.permissions.includes(permission);
+  const tabs: Array<[Tab, string, boolean]> = [
+    ['profile', 'Profil', true],
+    ['password', 'Mot de passe', true],
+    ['mfa', 'MFA', true],
+    ['users', 'Utilisateurs', can('user:create') || can('user:update')],
+    ['roles', 'Roles', can('role:assign')],
+    ['permissions', 'Permissions', can('role:assign')],
+    ['scopes', 'Perimetres', can('role:assign')],
+    ['sessions', 'Sessions', true],
+    ['students', 'Eleves', can('student:read')],
+    ['studentForm', 'Nouvel eleve', can('student:create')],
+    ['enrollments', 'Inscriptions', can('student:update')],
+    ['cards', 'Cartes', can('card:verify') || can('card:issue')],
   ];
 
   async function logout() {
@@ -52,7 +57,7 @@ function App() {
           <span>EduCard Secure</span>
         </div>
         <nav>
-          {tabs.map(([key, label]) => (
+          {tabs.filter(([, , visible]) => visible).map(([key, label]) => (
             <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
               {label}
             </button>
@@ -81,6 +86,10 @@ function App() {
         {tab === 'permissions' && <TablePanel loader={api.permissions} title="Permissions" />}
         {tab === 'scopes' && <ScopesPanel onError={setError} />}
         {tab === 'sessions' && <SessionPanel />}
+        {tab === 'students' && <StudentsPanel can={can} onError={setError} />}
+        {tab === 'studentForm' && <StudentForm onError={setError} />}
+        {tab === 'enrollments' && <EnrollmentPanel onError={setError} />}
+        {tab === 'cards' && <CardsPanel can={can} onError={setError} />}
       </section>
     </main>
   );
@@ -205,12 +214,248 @@ function SessionPanel() {
   return <section className="panel"><UsersRound size={24} /><p>Session courante protegee par cookie HttpOnly et jeton CSRF.</p></section>;
 }
 
-function DataTable({ rows }: { rows: Array<Record<string, unknown>> }) {
+function StudentsPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<{ items: Student[]; total: number; page: number; page_size: number } | null>(null);
+  const [selected, setSelected] = useState<Student | null>(null);
+  const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
+  const [duplicates, setDuplicates] = useState<Array<Record<string, unknown>>>([]);
+
+  async function load(nextPage = page) {
+    try {
+      setData(await api.students(`?q=${encodeURIComponent(query)}&page=${nextPage}&page_size=10`));
+      setPage(nextPage);
+    } catch {
+      onError('Recherche eleves refusee');
+    }
+  }
+
+  useEffect(() => { void load(1); }, []);
+
+  async function selectStudent(student: Student) {
+    setSelected(student);
+    setHistory(await api.studentHistory(student.id));
+    setDuplicates(await api.duplicateCandidates(student.id));
+  }
+
+  return (
+    <section className="stack">
+      <div className="toolbar">
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Recherche" />
+        <button onClick={() => void load(1)}><RefreshCw size={18} /> Rechercher</button>
+        <button disabled={page <= 1} onClick={() => void load(page - 1)}>Precedent</button>
+        <button onClick={() => void load(page + 1)}>Suivant</button>
+      </div>
+      <div className="panel">
+        <DataTable rows={(data?.items ?? []).map((student) => ({ id: student.id, matricule: student.student_number, nom: student.last_name, prenom: student.first_name, statut: student.status, ecole: student.current_school_id }))} onRow={(row) => {
+          const student = data?.items.find((item) => item.id === row.id);
+          if (student) void selectStudent(student);
+        }} />
+        <p>{data?.total ?? 0} resultat(s)</p>
+      </div>
+      {selected && (
+        <section className="grid2">
+          <StudentEdit student={selected} canArchive={can('student:archive')} onError={onError} onSaved={setSelected} />
+          <section className="panel">
+            <h2><FileClock size={18} /> Historique</h2>
+            <DataTable rows={history} />
+            <h2>Doublons potentiels</h2>
+            <DataTable rows={duplicates} />
+          </section>
+        </section>
+      )}
+    </section>
+  );
+}
+
+function StudentEdit({ student, canArchive, onError, onSaved }: { student: Student; canArchive: boolean; onError: (value: string) => void; onSaved: (student: Student) => void }) {
+  const [firstName, setFirstName] = useState(student.first_name);
+  const [lastName, setLastName] = useState(student.last_name);
+  const [statusValue, setStatusValue] = useState(student.status);
+  return (
+    <form className="panel formGrid" onSubmit={async (event) => {
+      event.preventDefault();
+      try {
+        onSaved(await api.updateStudent(student.id, { first_name: firstName, last_name: lastName, status: statusValue, record_version: student.record_version }));
+      } catch {
+        onError('Modification eleve refusee');
+      }
+    }}>
+      <h2><School size={18} /> Fiche eleve</h2>
+      <input value={lastName} onChange={(event) => setLastName(event.target.value)} />
+      <input value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+      <input value={statusValue} onChange={(event) => setStatusValue(event.target.value)} />
+      <button className="primary">Enregistrer</button>
+      {canArchive && <button type="button" onClick={async () => {
+        if (!window.confirm('Confirmer archivage logique ?')) return;
+        try {
+          onSaved(await api.archiveStudent(student.id));
+        } catch {
+          onError('Archivage refuse');
+        }
+      }}>Archiver</button>}
+    </form>
+  );
+}
+
+function StudentForm({ onError }: { onError: (value: string) => void }) {
+  const [payload, setPayload] = useState({ last_name: '', first_name: '', birth_date: '', school_id: '', classroom_id: '' });
+  const set = (key: keyof typeof payload, value: string) => setPayload({ ...payload, [key]: value });
+  return (
+    <form className="panel formGrid" onSubmit={async (event) => {
+      event.preventDefault();
+      try {
+        await api.createStudent({
+          last_name: payload.last_name,
+          first_name: payload.first_name,
+          birth_date: payload.birth_date,
+          school_id: Number(payload.school_id),
+          classroom_id: payload.classroom_id ? Number(payload.classroom_id) : undefined,
+        });
+        setPayload({ last_name: '', first_name: '', birth_date: '', school_id: '', classroom_id: '' });
+      } catch {
+        onError('Creation eleve refusee');
+      }
+    }}>
+      <h2>Nouvel eleve</h2>
+      <input required placeholder="Nom fictif" value={payload.last_name} onChange={(event) => set('last_name', event.target.value)} />
+      <input required placeholder="Prenom fictif" value={payload.first_name} onChange={(event) => set('first_name', event.target.value)} />
+      <input required type="date" value={payload.birth_date} onChange={(event) => set('birth_date', event.target.value)} />
+      <input required placeholder="ID etablissement" value={payload.school_id} onChange={(event) => set('school_id', event.target.value)} />
+      <input placeholder="ID classe" value={payload.classroom_id} onChange={(event) => set('classroom_id', event.target.value)} />
+      <button className="primary"><School size={18} /> Creer</button>
+    </form>
+  );
+}
+
+function EnrollmentPanel({ onError }: { onError: (value: string) => void }) {
+  const [studentId, setStudentId] = useState('');
+  const [schoolId, setSchoolId] = useState('');
+  const [classroomId, setClassroomId] = useState('');
+  const [schoolYearId, setSchoolYearId] = useState('');
+  const [toSchoolId, setToSchoolId] = useState('');
+  const [toClassroomId, setToClassroomId] = useState('');
+  return (
+    <section className="grid2">
+      <form className="panel formGrid" onSubmit={async (event) => {
+        event.preventDefault();
+        try {
+          await api.enroll({ student_id: Number(studentId), school_id: Number(schoolId), classroom_id: Number(classroomId), school_year_id: Number(schoolYearId), status: 'ACTIVE' });
+        } catch {
+          onError('Inscription refusee');
+        }
+      }}>
+        <h2>Inscription</h2>
+        <input placeholder="ID eleve" value={studentId} onChange={(event) => setStudentId(event.target.value)} />
+        <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
+        <input placeholder="ID classe" value={classroomId} onChange={(event) => setClassroomId(event.target.value)} />
+        <input placeholder="ID annee scolaire" value={schoolYearId} onChange={(event) => setSchoolYearId(event.target.value)} />
+        <button className="primary">Valider</button>
+      </form>
+      <form className="panel formGrid" onSubmit={async (event) => {
+        event.preventDefault();
+        if (!window.confirm('Confirmer transfert ?')) return;
+        try {
+          await api.transfer({ student_id: Number(studentId), to_school_id: Number(toSchoolId), to_classroom_id: toClassroomId ? Number(toClassroomId) : undefined, comment: 'Transfert administratif fictif' });
+        } catch {
+          onError('Transfert refuse');
+        }
+      }}>
+        <h2>Transfert</h2>
+        <input placeholder="ID eleve" value={studentId} onChange={(event) => setStudentId(event.target.value)} />
+        <input placeholder="Nouvel etablissement" value={toSchoolId} onChange={(event) => setToSchoolId(event.target.value)} />
+        <input placeholder="Nouvelle classe" value={toClassroomId} onChange={(event) => setToClassroomId(event.target.value)} />
+        <button>Transferer</button>
+      </form>
+    </section>
+  );
+}
+
+function CardsPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [cards, setCards] = useState<Card[]>([]);
+  const [studentId, setStudentId] = useState('');
+  const [selected, setSelected] = useState<Card | null>(null);
+  const [history, setHistory] = useState<Record<string, Array<Record<string, unknown>>> | null>(null);
+
+  async function load() {
+    try {
+      setCards(await api.cards());
+    } catch {
+      onError('Acces cartes refuse');
+    }
+  }
+  useEffect(() => { void load(); }, []);
+
+  async function selectCard(card: Card) {
+    setSelected(card);
+    setHistory(await api.cardHistory(card.id));
+  }
+
+  async function action(actionName: string) {
+    if (!selected) return;
+    if (!window.confirm('Confirmer operation carte ?')) return;
+    try {
+      const card = await api.cardAction(selected.id, actionName, `${actionName} administratif fictif`);
+      setSelected(card);
+      await load();
+    } catch {
+      onError('Operation carte refusee');
+    }
+  }
+
+  return (
+    <section className="stack">
+      {can('card:issue') && (
+        <form className="toolbar" onSubmit={async (event) => {
+          event.preventDefault();
+          try {
+            await api.createCard({ student_id: Number(studentId), reason: 'Demande administrative fictive' });
+            await load();
+          } catch {
+            onError('Emission carte refusee');
+          }
+        }}>
+          <input placeholder="ID eleve" value={studentId} onChange={(event) => setStudentId(event.target.value)} />
+          <button className="primary"><CreditCard size={18} /> Demander</button>
+        </form>
+      )}
+      <div className="panel">
+        <DataTable rows={cards.map((card) => ({ id: card.id, serie: card.serial_number, eleve: card.student_id, statut: card.status, version: card.card_version }))} onRow={(row) => {
+          const card = cards.find((item) => item.id === row.id);
+          if (card) void selectCard(card);
+        }} />
+      </div>
+      {selected && (
+        <section className="grid2">
+          <div className="panel">
+            <h2>Fiche carte</h2>
+            <pre>{JSON.stringify(selected, null, 2)}</pre>
+            <div className="toolbar">
+              {can('card:issue') && <button onClick={() => void action('activate')}>Activer</button>}
+              {can('card:suspend') && <button onClick={() => void action('suspend')}>Suspendre</button>}
+              {can('card:suspend') && <button onClick={() => void action('reactivate')}>Reactiver</button>}
+              {can('card:revoke') && <button onClick={() => void action('revoke')}>Revoquer</button>}
+              {can('card:issue') && <button onClick={() => void action('replace')}>Remplacer</button>}
+            </div>
+          </div>
+          <div className="panel">
+            <h2>Historique carte</h2>
+            <DataTable rows={[...(history?.status_history ?? []), ...(history?.issuance_events ?? [])]} />
+          </div>
+        </section>
+      )}
+    </section>
+  );
+}
+
+function DataTable({ rows, onRow }: { rows: Array<Record<string, unknown>>; onRow?: (row: Record<string, unknown>) => void }) {
   const keys = useMemo(() => Array.from(new Set(rows.flatMap((row) => Object.keys(row)))).slice(0, 8), [rows]);
+  if (!rows.length) return <p>Aucune donnee</p>;
   return (
     <table>
       <thead><tr>{keys.map((key) => <th key={key}>{key}</th>)}</tr></thead>
-      <tbody>{rows.map((row, index) => <tr key={index}>{keys.map((key) => <td key={key}>{String(row[key] ?? '')}</td>)}</tr>)}</tbody>
+      <tbody>{rows.map((row, index) => <tr key={index} onClick={() => onRow?.(row)}>{keys.map((key) => <td key={key}>{String(row[key] ?? '')}</td>)}</tr>)}</tbody>
     </table>
   );
 }

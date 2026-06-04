@@ -169,3 +169,32 @@ Verifie ensuite :
 - Build frontend : reussi.
 - Test frontend : 1 passe.
 - Lint frontend : reussi.
+
+## Phase 4
+
+Statut : backend et frontend de phase 4 implementes et valides.
+
+Fichiers produits ou completes :
+
+- API FastAPI `students` et `cards`.
+- Services applicatifs pour matricule interne, doublons, inscriptions, transferts et cycle administratif des cartes.
+- Tests backend de scenario metier phase 4.
+- Frontend React/Vite pour eleves, inscriptions, transferts et cartes.
+- Documentation gestion eleves, inscriptions et cycle de vie carte.
+
+Contraintes respectees :
+
+- Donnees fictives uniquement.
+- Aucun QR signe complet.
+- Aucune integration externe.
+- Controle RBAC et perimetres cote backend.
+- Consultation sensible journalisee via `security_events`.
+
+Verifie :
+
+- Alembic `upgrade head` idempotent.
+- Tests backend : 12 passes.
+- Tests frontend : 1 passe.
+- Build frontend : reussi.
+- Lint frontend : reussi.
+- Scan de secrets : aucun secret reel detecte, seulement placeholders documentaires.
