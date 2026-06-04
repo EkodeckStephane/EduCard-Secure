@@ -1,16 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CreditCard, FileClock, KeyRound, LogOut, RefreshCw, School, ShieldCheck, UserCog, UsersRound } from 'lucide-react';
+import { BarChart3, CreditCard, FileClock, KeyRound, LogOut, Moon, RefreshCw, School, ShieldCheck, Sun, UserCog, UsersRound } from 'lucide-react';
 import { api, Card, Me, setCsrf, Student } from './api';
 import { Language, normalizeLanguage, t } from './i18n';
 import './styles.css';
 
 type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'dashboard' | 'dashCards' | 'dashAttendance' | 'dashPayments' | 'dashSecurity' | 'dashServices' | 'exports' | 'audit' | 'integrity' | 'alerts' | 'incidents' | 'privacy' | 'retention' | 'backups' | 'securitySettings' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
+type NavItem = [Tab, string, boolean];
+type NavGroup = { key: string; label: string; items: NavItem[] };
+type Theme = 'light' | 'dark';
 
 function App() {
   const [me, setMe] = useState<Me | null>(null);
-  const [tab, setTab] = useState<Tab>('profile');
+  const [tab, setTab] = useState<Tab>('dashboard');
   const [error, setError] = useState('');
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('educard-theme') === 'dark' ? 'dark' : 'light'));
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   async function loadMe() {
     try {
@@ -30,46 +35,95 @@ function App() {
     document.documentElement.lang = language;
   }, [language]);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('educard-theme', theme);
+  }, [theme]);
+
   if (!me) {
     return <Login onLogin={loadMe} />;
   }
 
   const label = (key: string) => t(language, key);
   const can = (permission: string) => me.permissions.includes(permission);
-  const tabs: Array<[Tab, string, boolean]> = [
-    ['profile', label('profile'), true],
-    ['password', label('password'), true],
-    ['mfa', label('mfa'), true],
-    ['users', label('users'), can('user:create') || can('user:update')],
-    ['roles', label('roles'), can('role:assign')],
-    ['permissions', label('permissions'), can('role:assign')],
-    ['scopes', label('scopes'), can('role:assign')],
-    ['sessions', label('sessions'), true],
-    ['dashboard', label('dashboard'), can('dashboard:read')],
-    ['dashCards', label('dashCards'), can('dashboard:read')],
-    ['dashAttendance', label('dashAttendance'), can('dashboard:read')],
-    ['dashPayments', label('dashPayments'), can('dashboard:read')],
-    ['dashSecurity', label('dashSecurity'), can('dashboard:read')],
-    ['dashServices', label('dashServices'), can('dashboard:read')],
-    ['exports', label('exports'), can('export:create') || can('export:download')],
-    ['audit', label('audit'), can('audit:read')],
-    ['integrity', label('integrity'), can('audit:read')],
-    ['alerts', label('alerts'), can('security:read')],
-    ['incidents', label('incidents'), can('incident:update') || can('incident:create')],
-    ['privacy', label('privacy'), can('privacy:read') || can('privacy:update')],
-    ['retention', label('retention'), can('privacy:read') || can('privacy:update')],
-    ['backups', label('backups'), can('backup:read')],
-    ['securitySettings', label('securitySettings'), can('security:read')],
-    ['students', label('students'), can('student:read')],
-    ['studentForm', label('studentForm'), can('student:create')],
-    ['enrollments', label('enrollments'), can('student:update')],
-    ['cards', label('cards'), can('card:verify') || can('card:issue')],
-    ['qr', label('qr'), can('card:verify') || can('card:issue')],
-    ['attendance', label('attendance'), can('attendance:read') || can('attendance:create')],
-    ['services', label('services'), can('service:verify') || can('service:manage')],
-    ['payments', label('payments'), can('payment:read') || can('payment:create')],
-    ['anomalies', label('anomalies'), can('audit:read') || can('card:verify')],
+  const navGroups: NavGroup[] = [
+    {
+      key: 'account',
+      label: label('groupAccount'),
+      items: [
+        ['profile', label('profile'), true],
+        ['password', label('password'), true],
+        ['mfa', label('mfa'), true],
+        ['sessions', label('sessions'), true],
+      ],
+    },
+    {
+      key: 'admin',
+      label: label('groupAdministration'),
+      items: [
+        ['users', label('users'), can('user:create') || can('user:update')],
+        ['roles', label('roles'), can('role:assign')],
+        ['permissions', label('permissions'), can('role:assign')],
+        ['scopes', label('scopes'), can('role:assign')],
+      ],
+    },
+    {
+      key: 'schooling',
+      label: label('groupSchooling'),
+      items: [
+        ['students', label('students'), can('student:read')],
+        ['studentForm', label('studentForm'), can('student:create')],
+        ['enrollments', label('enrollments'), can('student:update')],
+      ],
+    },
+    {
+      key: 'operations',
+      label: label('groupOperations'),
+      items: [
+        ['cards', label('cards'), can('card:verify') || can('card:issue')],
+        ['qr', label('qr'), can('card:verify') || can('card:issue')],
+        ['attendance', label('attendance'), can('attendance:read') || can('attendance:create')],
+        ['services', label('services'), can('service:verify') || can('service:manage')],
+        ['payments', label('payments'), can('payment:read') || can('payment:create')],
+      ],
+    },
+    {
+      key: 'dashboards',
+      label: label('groupDashboards'),
+      items: [
+        ['dashboard', label('dashboard'), can('dashboard:read')],
+        ['dashCards', label('dashCards'), can('dashboard:read')],
+        ['dashAttendance', label('dashAttendance'), can('dashboard:read')],
+        ['dashPayments', label('dashPayments'), can('dashboard:read')],
+        ['dashSecurity', label('dashSecurity'), can('dashboard:read')],
+        ['dashServices', label('dashServices'), can('dashboard:read')],
+        ['exports', label('exports'), can('export:create') || can('export:download')],
+      ],
+    },
+    {
+      key: 'security',
+      label: label('groupSecurity'),
+      items: [
+        ['audit', label('audit'), can('audit:read')],
+        ['integrity', label('integrity'), can('audit:read')],
+        ['alerts', label('alerts'), can('security:read')],
+        ['incidents', label('incidents'), can('incident:update') || can('incident:create')],
+        ['anomalies', label('anomalies'), can('audit:read') || can('card:verify')],
+        ['securitySettings', label('securitySettings'), can('security:read')],
+      ],
+    },
+    {
+      key: 'governance',
+      label: label('groupGovernance'),
+      items: [
+        ['privacy', label('privacy'), can('privacy:read') || can('privacy:update')],
+        ['retention', label('retention'), can('privacy:read') || can('privacy:update')],
+        ['backups', label('backups'), can('backup:read')],
+      ],
+    },
   ];
+  const visibleTabs = navGroups.flatMap((group) => group.items).filter(([, , visible]) => visible).map(([key]) => key);
+  const currentTab = visibleTabs.includes(tab) ? tab : visibleTabs[0] ?? 'profile';
 
   async function logout() {
     await api.logout();
@@ -84,11 +138,24 @@ function App() {
           <span>EduCard Secure</span>
         </div>
         <nav>
-          {tabs.filter(([, , visible]) => visible).map(([key, label]) => (
-            <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>
-              {label}
-            </button>
-          ))}
+          {navGroups.map((group) => {
+            const visibleItems = group.items.filter(([, , visible]) => visible);
+            if (!visibleItems.length) return null;
+            return (
+              <section className={`navGroup ${openGroup === group.key ? 'open' : ''}`} key={group.key}>
+                <button className="navGroupTitle" onClick={() => setOpenGroup(openGroup === group.key ? null : group.key)}>
+                  {group.label}
+                </button>
+                {openGroup === group.key && <div className="navItems">
+                  {visibleItems.map(([key, itemLabel]) => (
+                    <button key={key} className={currentTab === key ? 'active' : ''} onClick={() => setTab(key)}>
+                      {itemLabel}
+                    </button>
+                  ))}
+                </div>}
+              </section>
+            );
+          })}
         </nav>
         <button className="iconText" onClick={logout}>
           <LogOut size={18} /> {label('logout')}
@@ -111,44 +178,48 @@ function App() {
                 <option value="en">{label('english')}</option>
               </select>
             </label>
+            <button className="iconText secondaryAction" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              {theme === 'light' ? label('darkMode') : label('lightMode')}
+            </button>
             <button className="iconButton" onClick={() => void loadMe()} title={label('refresh')}>
               <RefreshCw size={20} />
             </button>
           </div>
         </header>
         {error && <div className="alert">{error}</div>}
-        {tab === 'profile' && <Profile me={me} />}
-        {tab === 'password' && <PasswordPanel onError={setError} onDone={() => setMe(null)} />}
-        {tab === 'mfa' && <MfaPanel onError={setError} />}
-        {tab === 'users' && <UsersPanel onError={setError} />}
-        {tab === 'roles' && <TablePanel loader={api.roles} title="Roles" />}
-        {tab === 'permissions' && <TablePanel loader={api.permissions} title="Permissions" />}
-        {tab === 'scopes' && <ScopesPanel onError={setError} />}
-        {tab === 'sessions' && <SessionPanel />}
-        {tab === 'dashboard' && <DashboardPanel onError={setError} />}
-        {tab === 'dashCards' && <DistributionPanel title="Cartes" loader={api.dashboardCards} onError={setError} />}
-        {tab === 'dashAttendance' && <DistributionPanel title="Presence" loader={api.dashboardAttendance} onError={setError} />}
-        {tab === 'dashPayments' && <DistributionPanel title="Paiements simules" loader={api.dashboardPayments} onError={setError} />}
-        {tab === 'dashSecurity' && <DistributionPanel title="Securite" loader={api.dashboardSecurity} onError={setError} />}
-        {tab === 'dashServices' && <DistributionPanel title="Services" loader={api.dashboardServices} onError={setError} />}
-        {tab === 'exports' && <ExportsPanel can={can} onError={setError} />}
-        {tab === 'audit' && <AuditPanel onError={setError} />}
-        {tab === 'integrity' && <IntegrityPanel onError={setError} />}
-        {tab === 'alerts' && <AlertsPanel onError={setError} />}
-        {tab === 'incidents' && <IncidentsPanel can={can} onError={setError} />}
-        {tab === 'privacy' && <PrivacyPanel can={can} onError={setError} />}
-        {tab === 'retention' && <RetentionPanel can={can} onError={setError} />}
-        {tab === 'backups' && <BackupsPanel onError={setError} />}
-        {tab === 'securitySettings' && <SecuritySettingsPanel />}
-        {tab === 'students' && <StudentsPanel can={can} onError={setError} />}
-        {tab === 'studentForm' && <StudentForm onError={setError} />}
-        {tab === 'enrollments' && <EnrollmentPanel onError={setError} />}
-        {tab === 'cards' && <CardsPanel can={can} onError={setError} />}
-        {tab === 'qr' && <QrPanel can={can} onError={setError} />}
-        {tab === 'attendance' && <AttendancePanel can={can} onError={setError} />}
-        {tab === 'services' && <ServicesPanel can={can} onError={setError} />}
-        {tab === 'payments' && <PaymentsPanel can={can} onError={setError} />}
-        {tab === 'anomalies' && <AnomaliesPanel />}
+        {currentTab === 'profile' && <Profile me={me} />}
+        {currentTab === 'password' && <PasswordPanel onError={setError} onDone={() => setMe(null)} />}
+        {currentTab === 'mfa' && <MfaPanel onError={setError} />}
+        {currentTab === 'users' && <UsersPanel onError={setError} />}
+        {currentTab === 'roles' && <TablePanel loader={api.roles} title="Roles" />}
+        {currentTab === 'permissions' && <TablePanel loader={api.permissions} title="Permissions" />}
+        {currentTab === 'scopes' && <ScopesPanel onError={setError} />}
+        {currentTab === 'sessions' && <SessionPanel />}
+        {currentTab === 'dashboard' && <DashboardPanel onError={setError} />}
+        {currentTab === 'dashCards' && <DistributionPanel title="Cartes" loader={api.dashboardCards} onError={setError} />}
+        {currentTab === 'dashAttendance' && <DistributionPanel title="Presence" loader={api.dashboardAttendance} onError={setError} />}
+        {currentTab === 'dashPayments' && <DistributionPanel title="Paiements simules" loader={api.dashboardPayments} onError={setError} />}
+        {currentTab === 'dashSecurity' && <DistributionPanel title="Securite" loader={api.dashboardSecurity} onError={setError} />}
+        {currentTab === 'dashServices' && <DistributionPanel title="Services" loader={api.dashboardServices} onError={setError} />}
+        {currentTab === 'exports' && <ExportsPanel can={can} onError={setError} />}
+        {currentTab === 'audit' && <AuditPanel onError={setError} />}
+        {currentTab === 'integrity' && <IntegrityPanel onError={setError} />}
+        {currentTab === 'alerts' && <AlertsPanel onError={setError} />}
+        {currentTab === 'incidents' && <IncidentsPanel can={can} onError={setError} />}
+        {currentTab === 'privacy' && <PrivacyPanel can={can} onError={setError} />}
+        {currentTab === 'retention' && <RetentionPanel can={can} onError={setError} />}
+        {currentTab === 'backups' && <BackupsPanel onError={setError} />}
+        {currentTab === 'securitySettings' && <SecuritySettingsPanel />}
+        {currentTab === 'students' && <StudentsPanel can={can} onError={setError} />}
+        {currentTab === 'studentForm' && <StudentForm onError={setError} />}
+        {currentTab === 'enrollments' && <EnrollmentPanel onError={setError} />}
+        {currentTab === 'cards' && <CardsPanel can={can} onError={setError} />}
+        {currentTab === 'qr' && <QrPanel can={can} onError={setError} />}
+        {currentTab === 'attendance' && <AttendancePanel can={can} onError={setError} />}
+        {currentTab === 'services' && <ServicesPanel can={can} onError={setError} />}
+        {currentTab === 'payments' && <PaymentsPanel can={can} onError={setError} />}
+        {currentTab === 'anomalies' && <AnomaliesPanel />}
       </section>
     </main>
   );
@@ -282,26 +353,119 @@ function SessionPanel() {
 function DashboardPanel({ onError }: { onError: (value: string) => void }) {
   const [schoolId, setSchoolId] = useState('');
   const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [charts, setCharts] = useState<Array<{ title: string; rows: Array<Record<string, unknown>> }>>([]);
   async function load() {
     try {
-      setData(await api.dashboardSummary(schoolId ? `?school_id=${schoolId}` : ''));
+      const params = schoolId ? `?school_id=${schoolId}` : '';
+      const [summary, cards, attendance, payments, security, services] = await Promise.all([
+        api.dashboardSummary(params),
+        api.dashboardCards(),
+        api.dashboardAttendance(),
+        api.dashboardPayments(),
+        api.dashboardSecurity(),
+        api.dashboardServices(),
+      ]);
+      setData(summary);
+      setCharts([
+        { title: 'Cartes', rows: (cards.distribution ?? []) as Array<Record<string, unknown>> },
+        { title: 'Presence', rows: (attendance.distribution ?? []) as Array<Record<string, unknown>> },
+        { title: 'Paiements simules', rows: (payments.distribution ?? []) as Array<Record<string, unknown>> },
+        { title: 'Securite', rows: (security.distribution ?? []) as Array<Record<string, unknown>> },
+        { title: 'Services', rows: (services.distribution ?? []) as Array<Record<string, unknown>> },
+      ]);
     } catch {
       onError('Dashboard refuse');
     }
   }
   useEffect(() => { void load(); }, []);
   const metrics = (data?.metrics ?? {}) as Record<string, unknown>;
+  const categories = [
+    {
+      key: 'school',
+      title: 'Scolarite',
+      description: 'Effectifs, inscriptions et couverture des etablissements.',
+      metrics: ['active_students', 'enrollments', 'schools', 'duplicates_detected'],
+    },
+    {
+      key: 'cards',
+      title: 'Cartes scolaires',
+      description: 'Cycle de vie administratif des cartes.',
+      metrics: ['cards_requested', 'cards_issued', 'cards_active', 'cards_suspended', 'cards_revoked', 'cards_replaced', 'issuance_rate', 'average_issuance_delay_hours'],
+    },
+    {
+      key: 'attendance',
+      title: 'Presences',
+      description: 'Pointages, retards et absences.',
+      metrics: ['attendance', 'late', 'absences'],
+    },
+    {
+      key: 'services',
+      title: 'Services',
+      description: 'Consommations et validations de droits fictifs.',
+      metrics: ['services_consumed'],
+    },
+    {
+      key: 'payments',
+      title: 'Paiements simules',
+      description: 'Transactions fictives et rapprochements.',
+      metrics: ['mock_transactions', 'reconciliation_rate'],
+    },
+    {
+      key: 'security',
+      title: 'Alertes et securite',
+      description: 'Incidents, refus, QR invalides, exports et alertes.',
+      metrics: ['incidents_open', 'incidents_resolved', 'failed_logins', 'access_denied', 'qr_invalid', 'exports', 'alerts'],
+    },
+  ].map((category) => ({
+    ...category,
+    entries: category.metrics.filter((metric) => Object.prototype.hasOwnProperty.call(metrics, metric)).map((metric) => [metric, metrics[metric]] as [string, unknown]),
+  })).filter((category) => category.entries.length);
   return (
-    <section className="stack">
-      <div className="toolbar">
-        <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
-        <button onClick={() => void load()}><RefreshCw size={18} /> Filtrer</button>
+    <section className="dashboardPage">
+      <div className="dashboardTopbar">
+        <div>
+          <h2><BarChart3 size={20} /> Tableau de bord central</h2>
+          <p>Vue synthetique des cartes, presences, services, paiements simules et alertes.</p>
+        </div>
+        <div className="toolbar">
+          <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
+          <button onClick={() => void load()}><RefreshCw size={18} /> Filtrer</button>
+        </div>
       </div>
-      <section className="metricGrid">
-        {Object.entries(metrics).map(([key, value]) => <div className="metric" key={key}><span>{key}</span><strong>{String(value)}</strong></div>)}
+      {categories.length ? categories.map((category) => (
+        <section className="dashboardCategory" key={category.key}>
+          <div className="categoryHeader">
+            <h3>{category.title}</h3>
+            <p>{category.description}</p>
+          </div>
+          <div className="kpiGrid">
+            {category.entries.map(([key, value]) => <KpiCard key={key} label={key} value={value} />)}
+          </div>
+        </section>
+      )) : <p>Aucun indicateur charge</p>}
+      <section className="chartGrid">
+        {charts.map((chart) => (
+          <section className="panel" key={chart.title}>
+            <h2>{chart.title}</h2>
+            <BarChart rows={chart.rows} />
+          </section>
+        ))}
       </section>
     </section>
   );
+}
+
+function KpiCard({ label, value }: { label: string; value: unknown }) {
+  return (
+    <article className="kpiCard">
+      <span>{formatMetricLabel(label)}</span>
+      <strong>{String(value)}</strong>
+    </article>
+  );
+}
+
+function formatMetricLabel(value: string) {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function DistributionPanel({ title, loader, onError }: { title: string; loader: () => Promise<Record<string, unknown>>; onError: (value: string) => void }) {
@@ -321,6 +485,7 @@ function DistributionPanel({ title, loader, onError }: { title: string; loader: 
 function BarChart({ rows }: { rows: Array<Record<string, unknown>> }) {
   const numeric = rows.map((row) => typeof row.value === 'number' ? row.value : 0);
   const max = Math.max(1, ...numeric);
+  if (!rows.length) return <p>Aucune donnee graphique</p>;
   return (
     <div className="barChart">
       {rows.map((row) => {
