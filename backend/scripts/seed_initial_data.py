@@ -57,6 +57,9 @@ PERMISSIONS = [
     ("user:update", "user", "update"),
     ("role:assign", "role", "assign"),
     ("settings:update", "settings", "update"),
+    ("dashboard:read", "dashboard", "read"),
+    ("export:create", "export", "create"),
+    ("export:download", "export", "download"),
 ]
 
 

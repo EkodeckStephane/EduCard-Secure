@@ -230,3 +230,32 @@ Verifie :
 - Lint frontend : reussi.
 - Scan de secrets : aucun secret reel detecte, seulement placeholders documentaires.
 - `git ls-files private secrets *.pem *.key` : aucune cle privee suivie par Git.
+
+## Phase 6
+
+Statut : backend et frontend de phase 6 implementes et valides.
+
+Fichiers produits ou completes :
+
+- API dashboards et exports controles.
+- Services statistiques avec scopes backend et masquage des petits effectifs.
+- Exports CSV agreges avec nom opaque, expiration et journalisation.
+- Frontend tableaux de bord, graphiques simples et exports.
+- Documentation dashboards, statistiques et securite des exports.
+
+Contraintes respectees :
+
+- Donnees fictives uniquement.
+- Pas de donnees individuelles dans les vues statistiques.
+- Requetes compatibles MySQL 5.7.
+- Exports journalises dans `security_events` et `export_events`.
+
+Verifie :
+
+- Alembic `upgrade head` idempotent.
+- `seed_demo_data.py` relancable et idempotent.
+- Tests backend : 16 passes.
+- Tests frontend : 1 passe.
+- Build frontend : reussi.
+- Lint frontend : reussi.
+- Scenario de filtrage, scope, export, telechargement et logs couvert par tests phase 6.

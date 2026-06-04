@@ -62,6 +62,22 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function requestText(path: string, options: RequestInit = {}): Promise<string> {
+  const response = await fetch(path, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+      ...(options.headers ?? {}),
+    },
+    ...options,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.text();
+}
+
 export const api = {
   login: (username: string, password: string, mfaCode?: string) =>
     request<{ mfa_required: boolean; csrf_token?: string; user_id?: string }>('/api/v1/auth/login', {
@@ -112,4 +128,14 @@ export const api = {
   mockPayment: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/payments/mock', { method: 'POST', body: JSON.stringify(payload) }),
   reconcilePayment: (id: number, notes = 'Rapprochement fictif') => request<Record<string, unknown>>(`/api/v1/payments/${id}/reconcile`, { method: 'POST', body: JSON.stringify({ notes }) }),
   reconciliations: () => request<Array<Record<string, unknown>>>('/api/v1/payments/reconciliations'),
+  dashboardSummary: (params = '') => request<Record<string, unknown>>(`/api/v1/dashboard/summary${params}`),
+  dashboardCards: (params = '') => request<Record<string, unknown>>(`/api/v1/dashboard/cards${params}`),
+  dashboardAttendance: (params = '') => request<Record<string, unknown>>(`/api/v1/dashboard/attendance${params}`),
+  dashboardPayments: (params = '') => request<Record<string, unknown>>(`/api/v1/dashboard/payments${params}`),
+  dashboardSecurity: () => request<Record<string, unknown>>('/api/v1/dashboard/security'),
+  dashboardServices: () => request<Record<string, unknown>>('/api/v1/dashboard/services'),
+  createExport: (payload: Record<string, unknown>) => request<Record<string, unknown>>('/api/v1/exports', { method: 'POST', body: JSON.stringify(payload) }),
+  exports: () => request<Array<Record<string, unknown>>>('/api/v1/exports'),
+  exportDetail: (id: number) => request<Record<string, unknown>>(`/api/v1/exports/${id}`),
+  downloadExport: (id: number) => requestText(`/api/v1/exports/${id}/download`, { method: 'POST' }),
 };

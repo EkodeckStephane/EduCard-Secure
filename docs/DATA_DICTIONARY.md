@@ -78,3 +78,10 @@ Status transitions, one-active-card rules and coherent scopes are enforced by ap
 - `cards.serial_number`: opaque internal card serial, generated independently of personal data.
 - `cards.card_version`: incremented for replacement cards.
 - `card_status_history` and `card_issuance_events`: complete administrative trace for phase 4 lifecycle operations.
+
+## Phase 6 Field Notes
+
+- `exports.public_id`: opaque filename basis for generated files.
+- `exports.expires_at`: prototype expiration timestamp checked on download.
+- `export_events.event_type`: records lifecycle events; phase 6 stores prototype SHA-256 digest as `CREATED:<hash>`.
+- Dashboard APIs return aggregate values only and mask small non-zero counts.

@@ -159,6 +159,56 @@ header p {
   gap: 14px;
 }
 
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.metric {
+  background: #ffffff;
+  border: 1px solid #d8e0dc;
+  border-radius: 8px;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.metric span {
+  color: #60736d;
+  font-size: 13px;
+}
+
+.metric strong {
+  font-size: 24px;
+}
+
+.barChart {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 150px 1fr 80px;
+  gap: 10px;
+  align-items: center;
+}
+
+.barRow div {
+  height: 14px;
+  background: #e7ece9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barRow i {
+  display: block;
+  height: 100%;
+  background: #276b5b;
+}
+
 .primary, .iconText {
   display: inline-flex;
   align-items: center;

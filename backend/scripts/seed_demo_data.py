@@ -1,6 +1,9 @@
 from datetime import UTC, date, datetime
+from pathlib import Path
+import sys
 from uuid import uuid4
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sqlalchemy import select
 
 from app.core.database import SessionLocal
@@ -23,6 +26,10 @@ from app.models.entities import (
 def main() -> None:
     with SessionLocal() as session:
         region = session.execute(select(Region).filter_by(code="DEMO-CENTRAL")).scalar_one()
+        existing_school = session.execute(select(School).filter_by(code="DEMO-SCH-001")).scalar_one_or_none()
+        if existing_school:
+            print("Synthetic demo data already loaded.")
+            return
         department = Department(region_id=region.id, code="DEMO-DPT-01", name="Departement Demo 01", is_demo=True)
         session.add(department)
         session.flush()

@@ -78,4 +78,24 @@ Base path: `/api/v1`
 - `POST /payments/{id}/reconcile`: requires `payment:reconcile`, payment scope and CSRF.
 - `GET /payments/reconciliations`: requires `payment:read`.
 
+## Dashboards
+
+- `GET /dashboard/summary`: requires `dashboard:read`; supports scope filters.
+- `GET /dashboard/cards`: requires `dashboard:read`.
+- `GET /dashboard/attendance`: requires `dashboard:read`.
+- `GET /dashboard/payments`: requires `dashboard:read`.
+- `GET /dashboard/security`: requires `dashboard:read`.
+- `GET /dashboard/services`: requires `dashboard:read`.
+
+Small counts are masked as `MASKED`.
+
+## Controlled Exports
+
+- `POST /exports`: requires `export:create` and CSRF; reason is mandatory.
+- `GET /exports`: requires `export:download`; returns exports requested by the current user.
+- `GET /exports/{id}`: requires `export:download`; returns metadata for the current user's export.
+- `POST /exports/{id}/download`: requires `export:download` and CSRF; logs the download.
+
+`INDIVIDUAL_STUDENT` exports additionally require `student:export`.
+
 OpenAPI is available at `/docs` when the FastAPI app is running.

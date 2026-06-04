@@ -35,6 +35,7 @@ The application tables use:
 - No dependency on enforced CHECK constraints.
 - No required JSON column behavior.
 - No MySQL 8-only syntax.
+- Phase 6 dashboard queries use simple `COUNT`, `GROUP BY`, joins and application-side rate calculations.
 
 ## Application-enforced rules
 
@@ -45,6 +46,8 @@ MySQL 5.7 does not reliably enforce all constraints expected by modern SQL desig
 - Valid status transitions.
 - QR payload validity period and signature checks.
 - Export authorization and retention validation.
+- Small-count suppression for statistics.
+- Export filename opacity and download expiry.
 - Demo purge limited to rows marked as synthetic.
 
 ## Account separation

@@ -4,7 +4,7 @@ import { CreditCard, FileClock, KeyRound, LogOut, RefreshCw, School, ShieldCheck
 import { api, Card, Me, setCsrf, Student } from './api';
 import './styles.css';
 
-type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
+type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'dashboard' | 'dashCards' | 'dashAttendance' | 'dashPayments' | 'dashSecurity' | 'dashServices' | 'exports' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
 
 function App() {
   const [me, setMe] = useState<Me | null>(null);
@@ -38,6 +38,13 @@ function App() {
     ['permissions', 'Permissions', can('role:assign')],
     ['scopes', 'Perimetres', can('role:assign')],
     ['sessions', 'Sessions', true],
+    ['dashboard', 'Dashboard', can('dashboard:read')],
+    ['dashCards', 'Stats cartes', can('dashboard:read')],
+    ['dashAttendance', 'Stats presence', can('dashboard:read')],
+    ['dashPayments', 'Stats paiements', can('dashboard:read')],
+    ['dashSecurity', 'Stats securite', can('dashboard:read')],
+    ['dashServices', 'Stats services', can('dashboard:read')],
+    ['exports', 'Exports', can('export:create') || can('export:download')],
     ['students', 'Eleves', can('student:read')],
     ['studentForm', 'Nouvel eleve', can('student:create')],
     ['enrollments', 'Inscriptions', can('student:update')],
@@ -91,6 +98,13 @@ function App() {
         {tab === 'permissions' && <TablePanel loader={api.permissions} title="Permissions" />}
         {tab === 'scopes' && <ScopesPanel onError={setError} />}
         {tab === 'sessions' && <SessionPanel />}
+        {tab === 'dashboard' && <DashboardPanel onError={setError} />}
+        {tab === 'dashCards' && <DistributionPanel title="Cartes" loader={api.dashboardCards} onError={setError} />}
+        {tab === 'dashAttendance' && <DistributionPanel title="Presence" loader={api.dashboardAttendance} onError={setError} />}
+        {tab === 'dashPayments' && <DistributionPanel title="Paiements simules" loader={api.dashboardPayments} onError={setError} />}
+        {tab === 'dashSecurity' && <DistributionPanel title="Securite" loader={api.dashboardSecurity} onError={setError} />}
+        {tab === 'dashServices' && <DistributionPanel title="Services" loader={api.dashboardServices} onError={setError} />}
+        {tab === 'exports' && <ExportsPanel can={can} onError={setError} />}
         {tab === 'students' && <StudentsPanel can={can} onError={setError} />}
         {tab === 'studentForm' && <StudentForm onError={setError} />}
         {tab === 'enrollments' && <EnrollmentPanel onError={setError} />}
@@ -222,6 +236,94 @@ function ScopesPanel({ onError }: { onError: (value: string) => void }) {
 
 function SessionPanel() {
   return <section className="panel"><UsersRound size={24} /><p>Session courante protegee par cookie HttpOnly et jeton CSRF.</p></section>;
+}
+
+function DashboardPanel({ onError }: { onError: (value: string) => void }) {
+  const [schoolId, setSchoolId] = useState('');
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  async function load() {
+    try {
+      setData(await api.dashboardSummary(schoolId ? `?school_id=${schoolId}` : ''));
+    } catch {
+      onError('Dashboard refuse');
+    }
+  }
+  useEffect(() => { void load(); }, []);
+  const metrics = (data?.metrics ?? {}) as Record<string, unknown>;
+  return (
+    <section className="stack">
+      <div className="toolbar">
+        <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
+        <button onClick={() => void load()}><RefreshCw size={18} /> Filtrer</button>
+      </div>
+      <section className="metricGrid">
+        {Object.entries(metrics).map(([key, value]) => <div className="metric" key={key}><span>{key}</span><strong>{String(value)}</strong></div>)}
+      </section>
+    </section>
+  );
+}
+
+function DistributionPanel({ title, loader, onError }: { title: string; loader: () => Promise<Record<string, unknown>>; onError: (value: string) => void }) {
+  const [data, setData] = useState<Array<Record<string, unknown>>>([]);
+  useEffect(() => {
+    loader().then((response) => setData((response.distribution ?? []) as Array<Record<string, unknown>>)).catch(() => onError('Statistiques refusees'));
+  }, [loader, onError]);
+  return (
+    <section className="panel">
+      <h2>{title}</h2>
+      <BarChart rows={data} />
+      <DataTable rows={data} />
+    </section>
+  );
+}
+
+function BarChart({ rows }: { rows: Array<Record<string, unknown>> }) {
+  const numeric = rows.map((row) => typeof row.value === 'number' ? row.value : 0);
+  const max = Math.max(1, ...numeric);
+  return (
+    <div className="barChart">
+      {rows.map((row) => {
+        const value = typeof row.value === 'number' ? row.value : 0;
+        return <div className="barRow" key={String(row.label)}><span>{String(row.label)}</span><div><i style={{ width: `${(value / max) * 100}%` }} /></div><strong>{String(row.value)}</strong></div>;
+      })}
+    </div>
+  );
+}
+
+function ExportsPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [schoolId, setSchoolId] = useState('');
+  const [selected, setSelected] = useState('');
+  const [download, setDownload] = useState('');
+  async function load() {
+    try {
+      setRows(await api.exports());
+    } catch {
+      onError('Lecture exports refusee');
+    }
+  }
+  useEffect(() => { void load(); }, []);
+  return (
+    <section className="stack">
+      {can('export:create') && (
+        <form className="toolbar" onSubmit={(event) => {
+          event.preventDefault();
+          api.createExport({ export_type: 'DASHBOARD_SUMMARY', format: 'CSV', reason: 'Export statistiques agregees', filters: { school_id: schoolId ? Number(schoolId) : undefined } }).then(load).catch(() => onError('Creation export refusee'));
+        }}>
+          <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
+          <button className="primary">Demander export CSV</button>
+        </form>
+      )}
+      <div className="panel"><DataTable rows={rows} onRow={(row) => setSelected(String(row.id ?? ''))} /></div>
+      {can('export:download') && (
+        <section className="panel formGrid">
+          <input placeholder="ID export" value={selected} onChange={(event) => setSelected(event.target.value)} />
+          <button onClick={() => api.downloadExport(Number(selected)).then(setDownload).catch(() => onError('Telechargement refuse'))}>Telecharger</button>
+          <pre>{download}</pre>
+        </section>
+      )}
+    </section>
+  );
 }
 
 function StudentsPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
