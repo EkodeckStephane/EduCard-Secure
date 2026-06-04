@@ -105,3 +105,41 @@ Non realise volontairement :
 - Pas de migration Alembic.
 - Pas de SQL executable.
 - Pas d'installation de dependances.
+
+## Phase 2
+
+Statut : executee avec autorisation utilisateur.
+
+Fichiers produits ou completes :
+
+- Configuration `.env.example`.
+- Configuration backend SQLAlchemy.
+- Modeles SQLAlchemy initiaux.
+- Alembic initialise avec migration `0001_initial_schema`.
+- Scripts SQL d'initialisation non destructifs.
+- Scripts de seed initial, seed demo et purge demo.
+- Scripts PowerShell MySQL, migration, seed, purge, backup et restore.
+- Documentation MySQL 5.7, dictionnaire de donnees, setup Windows, backup/restore et migration MySQL 8.4.
+
+Realise :
+
+- Environnement virtuel local `.venv` cree.
+- Dependances backend installees localement.
+- Fichier `.env` local genere avec secrets aleatoires et ignore par Git.
+- Base `educard_secure` creee sur MySQL 5.7.
+- Compte dedie `educard_app` cree.
+- Privileges temporaires de migration accordes puis retires apres migration.
+- Migration Alembic `0001_initial_schema` executee.
+- Donnees initiales chargees.
+- Donnees fictives de demonstration chargees.
+- Lecture des tables et compteurs verifiee.
+- Transaction avec rollback testee.
+- Index verifies via `information_schema`.
+- Backup teste avec `mysqldump --no-tablespaces`.
+
+Non realise volontairement :
+
+- Pas de restauration de sauvegarde.
+- Pas de modification du service Windows MySQL.
+- Pas de modification du port MySQL.
+- Pas de suppression de base existante.

@@ -1,0 +1,1 @@
+"""EduCard Secure backend package."""

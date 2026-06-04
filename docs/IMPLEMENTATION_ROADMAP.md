@@ -69,15 +69,24 @@ Livrables ajoutes pendant cette phase :
 
 Actions proposees :
 
-1. Creer la structure backend minimale.
-2. Configurer SQLAlchemy et Alembic.
-3. Produire les modeles principaux.
-4. Produire les migrations compatibles MySQL 5.7.
-5. Ajouter scripts SQL d'initialisation.
-6. Ajouter generation de donnees synthetiques.
-7. Preparer sauvegarde, restauration et purge demo.
+1. Creer la structure backend minimale. Statut : realise.
+2. Configurer SQLAlchemy et Alembic. Statut : realise.
+3. Produire les modeles principaux. Statut : realise.
+4. Produire les migrations compatibles MySQL 5.7. Statut : prepare, non execute.
+5. Ajouter scripts SQL d'initialisation. Statut : realise.
+6. Ajouter generation de donnees synthetiques. Statut : realise.
+7. Preparer sauvegarde, restauration et purge demo. Statut : realise.
 
 Condition prealable : instruction explicite pour creer ou utiliser une base MySQL locale.
+
+Execution differee :
+
+- Creation de la base.
+- Execution Alembic.
+- Chargement des donnees initiales.
+- Chargement des donnees demo.
+- Backup.
+- Restore.
 
 ## Phase 3 - Backend
 

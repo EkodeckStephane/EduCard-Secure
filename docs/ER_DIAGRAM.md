@@ -1,6 +1,6 @@
 # ER Diagram
 
-Ce diagramme Mermaid represente le modele relationnel logique cible. Il reste volontairement au niveau conceptuel pour la phase 1. Les types SQL precis seront produits en phase 2.
+Ce diagramme Mermaid represente le modele relationnel logique cible. La phase 2 ajoute les modeles SQLAlchemy et la migration Alembic initiale compatibles MySQL 5.7.
 
 ```mermaid
 erDiagram
@@ -439,4 +439,3 @@ erDiagram
   users ||--o{ export_events : writes
   users ||--o{ backup_events : runs
 ```
-
