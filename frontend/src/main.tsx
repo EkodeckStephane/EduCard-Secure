@@ -4,7 +4,7 @@ import { CreditCard, FileClock, KeyRound, LogOut, RefreshCw, School, ShieldCheck
 import { api, Card, Me, setCsrf, Student } from './api';
 import './styles.css';
 
-type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'students' | 'studentForm' | 'enrollments' | 'cards';
+type Tab = 'profile' | 'password' | 'mfa' | 'users' | 'roles' | 'permissions' | 'scopes' | 'sessions' | 'students' | 'studentForm' | 'enrollments' | 'cards' | 'qr' | 'attendance' | 'services' | 'payments' | 'anomalies';
 
 function App() {
   const [me, setMe] = useState<Me | null>(null);
@@ -42,6 +42,11 @@ function App() {
     ['studentForm', 'Nouvel eleve', can('student:create')],
     ['enrollments', 'Inscriptions', can('student:update')],
     ['cards', 'Cartes', can('card:verify') || can('card:issue')],
+    ['qr', 'QR', can('card:verify') || can('card:issue')],
+    ['attendance', 'Presence', can('attendance:read') || can('attendance:create')],
+    ['services', 'Services', can('service:verify') || can('service:manage')],
+    ['payments', 'Paiements', can('payment:read') || can('payment:create')],
+    ['anomalies', 'Anomalies', can('audit:read') || can('card:verify')],
   ];
 
   async function logout() {
@@ -90,6 +95,11 @@ function App() {
         {tab === 'studentForm' && <StudentForm onError={setError} />}
         {tab === 'enrollments' && <EnrollmentPanel onError={setError} />}
         {tab === 'cards' && <CardsPanel can={can} onError={setError} />}
+        {tab === 'qr' && <QrPanel can={can} onError={setError} />}
+        {tab === 'attendance' && <AttendancePanel can={can} onError={setError} />}
+        {tab === 'services' && <ServicesPanel can={can} onError={setError} />}
+        {tab === 'payments' && <PaymentsPanel can={can} onError={setError} />}
+        {tab === 'anomalies' && <AnomaliesPanel />}
       </section>
     </main>
   );
@@ -445,6 +455,179 @@ function CardsPanel({ can, onError }: { can: (permission: string) => boolean; on
           </div>
         </section>
       )}
+    </section>
+  );
+}
+
+function QrPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [cardId, setCardId] = useState('');
+  const [payload, setPayload] = useState('');
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  return (
+    <section className="grid2">
+      <form className="panel formGrid" onSubmit={async (event) => {
+        event.preventDefault();
+        try {
+          const response = await api.generateQr(Number(cardId), 60);
+          setPayload(String(response.payload ?? ''));
+          setResult(response);
+        } catch {
+          onError('Generation QR refusee');
+        }
+      }}>
+        <h2>Generation QR</h2>
+        <input placeholder="ID carte active" value={cardId} onChange={(event) => setCardId(event.target.value)} />
+        {can('card:issue') && <button className="primary"><CreditCard size={18} /> Generer</button>}
+        <textarea value={payload} onChange={(event) => setPayload(event.target.value)} placeholder="Payload QR signe" />
+      </form>
+      <section className="panel formGrid">
+        <h2>Verification QR</h2>
+        <textarea value={payload} onChange={(event) => setPayload(event.target.value)} placeholder="Payload a verifier" />
+        <button onClick={async () => {
+          try {
+            setResult(await api.verifyQr(payload));
+          } catch {
+            onError('Verification QR refusee');
+          }
+        }}>Verifier</button>
+        <pre>{JSON.stringify(result, null, 2)}</pre>
+      </section>
+    </section>
+  );
+}
+
+function AttendancePanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [schoolId, setSchoolId] = useState('');
+  const [cardId, setCardId] = useState('');
+  const [attendanceId, setAttendanceId] = useState('');
+  async function load() {
+    try {
+      setRows(await api.attendance(schoolId ? `?school_id=${schoolId}` : ''));
+    } catch {
+      onError('Lecture presence refusee');
+    }
+  }
+  useEffect(() => { void load(); }, []);
+  return (
+    <section className="stack">
+      <div className="toolbar">
+        <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
+        <input placeholder="ID carte" value={cardId} onChange={(event) => setCardId(event.target.value)} />
+        {can('attendance:create') && <button onClick={() => api.checkIn({ card_id: Number(cardId), school_id: Number(schoolId), event_type: 'ENTRY', source: 'CARD' }).then(load).catch(() => onError('Pointage refuse'))}>Entree</button>}
+        {can('attendance:create') && <button onClick={() => api.checkOut({ card_id: Number(cardId), school_id: Number(schoolId), event_type: 'EXIT', source: 'CARD' }).then(load).catch(() => onError('Sortie refusee'))}>Sortie</button>}
+        <button onClick={() => void load()}><RefreshCw size={18} /> Actualiser</button>
+      </div>
+      <div className="panel"><DataTable rows={rows} onRow={(row) => setAttendanceId(String(row.id ?? ''))} /></div>
+      {can('attendance:create') && (
+        <form className="panel formGrid" onSubmit={(event) => {
+          event.preventDefault();
+          api.correctAttendance(Number(attendanceId), { new_value: 'LATE', reason: 'Correction fictive' }).then(() => api.approveAttendance(Number(attendanceId))).then(load).catch(() => onError('Correction refusee'));
+        }}>
+          <h2>Correction</h2>
+          <input placeholder="ID presence" value={attendanceId} onChange={(event) => setAttendanceId(event.target.value)} />
+          <button>Corriger et valider</button>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function ServicesPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [services, setServices] = useState<Array<Record<string, unknown>>>([]);
+  const [studentId, setStudentId] = useState('');
+  const [serviceTypeId, setServiceTypeId] = useState('');
+  const [providerId, setProviderId] = useState('');
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  useEffect(() => { api.services().then(setServices).catch(() => onError('Lecture services refusee')); }, [onError]);
+  return (
+    <section className="grid2">
+      <section className="panel">
+        <h2>Services</h2>
+        <DataTable rows={services} onRow={(row) => setServiceTypeId(String(row.id ?? ''))} />
+      </section>
+      <form className="panel formGrid" onSubmit={async (event) => {
+        event.preventDefault();
+        try {
+          setResult(await api.verifyService({ student_id: Number(studentId), service_type_id: Number(serviceTypeId) }));
+        } catch {
+          onError('Verification service refusee');
+        }
+      }}>
+        <h2>Droits et eligibilite</h2>
+        <input placeholder="ID eleve" value={studentId} onChange={(event) => setStudentId(event.target.value)} />
+        <input placeholder="ID service" value={serviceTypeId} onChange={(event) => setServiceTypeId(event.target.value)} />
+        {can('service:manage') && <input placeholder="ID fournisseur fictif" value={providerId} onChange={(event) => setProviderId(event.target.value)} />}
+        {can('service:manage') && <button type="button" onClick={() => api.createEntitlement({
+          student_id: Number(studentId),
+          service_type_id: Number(serviceTypeId),
+          service_provider_id: Number(providerId),
+          valid_from: new Date(Date.now() - 3600000).toISOString(),
+          valid_until: new Date(Date.now() + 86400000).toISOString(),
+          status: 'ACTIVE',
+        }).catch(() => onError('Attribution droit refusee'))}>Attribuer</button>}
+        <button className="primary">Verifier</button>
+        <pre>{JSON.stringify(result, null, 2)}</pre>
+      </form>
+    </section>
+  );
+}
+
+function PaymentsPanel({ can, onError }: { can: (permission: string) => boolean; onError: (value: string) => void }) {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [schoolId, setSchoolId] = useState('');
+  const [schoolYearId, setSchoolYearId] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [paymentId, setPaymentId] = useState('');
+  async function load() {
+    try {
+      setRows(await api.payments());
+    } catch {
+      onError('Lecture paiements refusee');
+    }
+  }
+  useEffect(() => { void load(); }, []);
+  return (
+    <section className="stack">
+      {can('payment:create') && (
+        <form className="toolbar" onSubmit={(event) => {
+          event.preventDefault();
+          api.mockPayment({
+            provider_code: 'MOCK_MOMO',
+            idempotency_key: `ui-${Date.now()}`,
+            amount: 1500,
+            category: 'DEMO_FEES',
+            school_id: Number(schoolId),
+            school_year_id: Number(schoolYearId),
+            student_id: studentId ? Number(studentId) : undefined,
+            reason: 'Paiement simule UI',
+          }).then(load).catch(() => onError('Paiement simule refuse'));
+        }}>
+          <input placeholder="ID etablissement" value={schoolId} onChange={(event) => setSchoolId(event.target.value)} />
+          <input placeholder="ID annee" value={schoolYearId} onChange={(event) => setSchoolYearId(event.target.value)} />
+          <input placeholder="ID eleve" value={studentId} onChange={(event) => setStudentId(event.target.value)} />
+          <button className="primary">Creer paiement mock</button>
+        </form>
+      )}
+      <div className="panel"><DataTable rows={rows} onRow={(row) => setPaymentId(String(row.id ?? ''))} /></div>
+      {can('payment:reconcile') && (
+        <div className="toolbar">
+          <input placeholder="ID paiement" value={paymentId} onChange={(event) => setPaymentId(event.target.value)} />
+          <button onClick={() => {
+            if (!window.confirm('Confirmer rapprochement ?')) return;
+            api.reconcilePayment(Number(paymentId)).then(load).catch(() => onError('Rapprochement refuse'));
+          }}>Rapprocher</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AnomaliesPanel() {
+  return (
+    <section className="panel">
+      <h2>Anomalies</h2>
+      <p>Les anomalies phase 5 sont journalisees cote backend : QR invalide, carte suspendue ou revoquee, double pointage, paiement duplique et acces hors perimetre.</p>
     </section>
   );
 }

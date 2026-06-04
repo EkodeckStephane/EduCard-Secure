@@ -52,4 +52,30 @@ Base path: `/api/v1`
 - `POST /cards/{id}/replace`: requires `card:issue`, card scope and CSRF.
 - `GET /cards/{id}/history`: requires `card:verify` and card scope.
 
+## QR Verification
+
+- `POST /cards/{id}/qr/generate`: requires `card:issue`, card scope and CSRF. Returns an Ed25519-signed payload without personal data.
+- `POST /cards/verify`: requires `card:verify`. Verifies structure, signature, key status, expiry and card status.
+
+## Attendance
+
+- `GET /attendance`: requires `attendance:read`; supports `school_id` and `event_type`.
+- `POST /attendance/check-in`: requires `attendance:create`, school/card scope and CSRF.
+- `POST /attendance/check-out`: requires `attendance:create`, school/card scope and CSRF.
+- `POST /attendance/{id}/correct`: requires `attendance:create`, scope and CSRF.
+- `POST /attendance/{id}/approve-correction`: requires `attendance:create`, scope and CSRF.
+
+## Services
+
+- `GET /services`: requires `service:verify`.
+- `POST /services/entitlements`: requires `service:manage`, student scope and CSRF.
+- `POST /services/verify`: requires `service:verify`, student/card scope.
+
+## Mock Payments
+
+- `GET /payments`: requires `payment:read`; results are scope-filtered.
+- `POST /payments/mock`: requires `payment:create`, school/student scope and CSRF. Uses mock providers only.
+- `POST /payments/{id}/reconcile`: requires `payment:reconcile`, payment scope and CSRF.
+- `GET /payments/reconciliations`: requires `payment:read`.
+
 OpenAPI is available at `/docs` when the FastAPI app is running.

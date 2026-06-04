@@ -198,3 +198,35 @@ Verifie :
 - Build frontend : reussi.
 - Lint frontend : reussi.
 - Scan de secrets : aucun secret reel detecte, seulement placeholders documentaires.
+
+## Phase 5
+
+Statut : backend et frontend de phase 5 implementes et valides.
+
+Fichiers produits ou completes :
+
+- QR Ed25519 local, generation, verification, versions de cles et revocation.
+- Presence avec pointage, doublon, correction et validation.
+- Moteur de services configurables avec droits et verification.
+- Paiements simules avec adaptateurs mock, idempotence et rapprochement.
+- Ecrans frontend QR, presence, services, paiements et anomalies.
+- Documentation QR, cles, presence, services, paiements mock et menaces.
+
+Contraintes respectees :
+
+- Aucune API externe reelle.
+- Aucun QR contenant directement des donnees personnelles sensibles.
+- Cles locales dans `private/`, ignore par Git.
+- Aucun secret cote frontend.
+- Verification et operations sensibles journalisees.
+
+Verifie :
+
+- Alembic `upgrade head` idempotent.
+- Generation locale de cles QR de developpement dans `private/`.
+- Tests backend : 14 passes.
+- Tests frontend : 1 passe.
+- Build frontend : reussi.
+- Lint frontend : reussi.
+- Scan de secrets : aucun secret reel detecte, seulement placeholders documentaires.
+- `git ls-files private secrets *.pem *.key` : aucune cle privee suivie par Git.
