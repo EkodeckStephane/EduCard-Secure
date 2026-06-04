@@ -513,6 +513,15 @@ table {
   font-size: 14px;
 }
 
+.dataTable {
+  display: grid;
+  gap: 12px;
+}
+
+.tableScroller {
+  overflow: auto;
+}
+
 th, td {
   border-bottom: 1px solid var(--border);
   padding: 8px;
@@ -523,6 +532,64 @@ th, td {
 th {
   color: var(--muted);
   background: var(--surface-muted);
+}
+
+.sortButton {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-strong);
+  padding: 4px 0;
+  text-align: left;
+}
+
+.sortButton span:last-child {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.columnFilter {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.paginationBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.paginationBar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.paginationBar select {
+  min-height: 34px;
+}
+
+.paginationButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.paginationButtons button {
+  min-height: 34px;
+  padding: 6px 10px;
 }
 
 tbody tr {

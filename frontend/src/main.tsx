@@ -1265,13 +1265,100 @@ function AnomaliesPanel() {
 }
 
 function DataTable({ rows, onRow }: { rows: Array<Record<string, unknown>>; onRow?: (row: Record<string, unknown>) => void }) {
+  const [sortKey, setSortKey] = useState('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const keys = useMemo(() => Array.from(new Set(rows.flatMap((row) => Object.keys(row)))).slice(0, 8), [rows]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [rows, filters, sortKey, sortDirection, pageSize]);
+
+  const filteredRows = useMemo(() => rows.filter((row) => keys.every((key) => {
+    const filterValue = (filters[key] ?? '').trim().toLowerCase();
+    if (!filterValue) return true;
+    return String(row[key] ?? '').toLowerCase().includes(filterValue);
+  })), [filters, keys, rows]);
+
+  const sortedRows = useMemo(() => {
+    if (!sortKey) return filteredRows;
+    return [...filteredRows].sort((a, b) => {
+      const left = a[sortKey];
+      const right = b[sortKey];
+      const leftNumber = typeof left === 'number' ? left : Number(String(left ?? '').replace(',', '.'));
+      const rightNumber = typeof right === 'number' ? right : Number(String(right ?? '').replace(',', '.'));
+      const bothNumeric = Number.isFinite(leftNumber) && Number.isFinite(rightNumber);
+      const comparison = bothNumeric
+        ? leftNumber - rightNumber
+        : String(left ?? '').localeCompare(String(right ?? ''), undefined, { numeric: true, sensitivity: 'base' });
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredRows, sortDirection, sortKey]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const visibleRows = sortedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  function toggleSort(key: string) {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDirection('asc');
+    }
+  }
+
   if (!rows.length) return <p>Aucune donnee</p>;
   return (
-    <table>
-      <thead><tr>{keys.map((key) => <th key={key}>{key}</th>)}</tr></thead>
-      <tbody>{rows.map((row, index) => <tr key={index} onClick={() => onRow?.(row)}>{keys.map((key) => <td key={key}>{String(row[key] ?? '')}</td>)}</tr>)}</tbody>
-    </table>
+    <div className="dataTable">
+      <div className="tableScroller">
+        <table>
+          <thead>
+            <tr>
+              {keys.map((key) => (
+                <th key={key}>
+                  <button className="sortButton" onClick={() => toggleSort(key)}>
+                    <span>{key}</span>
+                    <span>{sortKey === key ? (sortDirection === 'asc' ? 'ASC' : 'DESC') : 'TRI'}</span>
+                  </button>
+                  <input
+                    className="columnFilter"
+                    value={filters[key] ?? ''}
+                    onChange={(event) => setFilters({ ...filters, [key]: event.target.value })}
+                    placeholder={`Filtrer ${key}`}
+                  />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map((row, index) => (
+              <tr key={`${currentPage}-${index}`} onClick={() => onRow?.(row)}>
+                {keys.map((key) => <td key={key}>{String(row[key] ?? '')}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {!visibleRows.length && <p>Aucun resultat pour les filtres actifs.</p>}
+      <div className="paginationBar">
+        <span>{sortedRows.length} resultat(s) - page {currentPage} / {totalPages}</span>
+        <label>
+          Lignes
+          <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}>
+            {[5, 10, 20, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+          </select>
+        </label>
+        <div className="paginationButtons">
+          <button onClick={() => setPage(1)} disabled={currentPage === 1}>Premiere</button>
+          <button onClick={() => setPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}>Precedente</button>
+          <button onClick={() => setPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}>Suivante</button>
+          <button onClick={() => setPage(totalPages)} disabled={currentPage === totalPages}>Derniere</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
