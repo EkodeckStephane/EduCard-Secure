@@ -783,13 +783,17 @@ function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }
     }));
   }, [rows]);
 
-  if (!regions.length) return <p>Aucun noeud visible pour ce perimetre.</p>;
+  if (!regions.length) return (
+    <div className="graphEmptyState">
+      <p>Aucun nœud visible pour ce périmètre. Vérifiez que des établissements sont rattachés à votre périmètre.</p>
+    </div>
+  );
   return (
     <div className="graphFrame">
       <div className="graphFrameHeader">
         <div>
-          <h3>Graphe des noeuds administratifs</h3>
-          <p>Clique sur un noeud rond pour afficher ses informations.</p>
+          <h3>Graphe des nœuds administratifs</h3>
+          <p>Cliquez sur un nœud pour afficher ses informations détaillées.</p>
         </div>
         <button onClick={() => setVisible(!visible)}>{visible ? 'Masquer le graphe' : 'Afficher le graphe'}</button>
       </div>
@@ -798,18 +802,18 @@ function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }
           <div className="hierarchyGraph">
             {regions.map((region) => (
               <section className="graphLevel" key={region.id}>
-                <GraphNode label={region.label} type="Region" count={`${region.departments.length} dep.`} level="region" onClick={() => setSelectedNode(region.details)} />
+                <GraphNode label={region.label} type="Région" count={`${region.departments.length} dép.`} level="region" selected={selectedNode === region.details} onClick={() => setSelectedNode(region.details)} />
                 <div className="graphChildren">
                   {region.departments.map((department) => (
                     <section className="graphLevel" key={department.id}>
-                      <GraphNode label={department.label} type="Departement" count={`${department.subdivisions.length} arr.`} level="department" onClick={() => setSelectedNode(department.details)} />
+                      <GraphNode label={department.label} type="Département" count={`${department.subdivisions.length} arr.`} level="department" selected={selectedNode === department.details} onClick={() => setSelectedNode(department.details)} />
                       <div className="graphChildren">
                         {department.subdivisions.map((subdivision) => (
                           <section className="graphLevel" key={subdivision.id}>
-                            <GraphNode label={subdivision.label} type="Arrondissement" count={`${subdivision.schools.length} etab.`} level="subdivision" onClick={() => setSelectedNode(subdivision.details)} />
+                            <GraphNode label={subdivision.label} type="Arrondissement" count={`${subdivision.schools.length} étab.`} level="subdivision" selected={selectedNode === subdivision.details} onClick={() => setSelectedNode(subdivision.details)} />
                             <div className="graphChildren schoolLeaves">
                               {subdivision.schools.map((school) => (
-                                <GraphNode key={school.id} label={school.label} type="Etablissement" count={school.code} level="school" onClick={() => setSelectedNode(school.details)} />
+                                <GraphNode key={school.id} label={school.label} type="Établissement" count={school.code} level="school" selected={selectedNode === school.details} onClick={() => setSelectedNode(school.details)} />
                               ))}
                             </div>
                           </section>
@@ -822,8 +826,35 @@ function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }
             ))}
           </div>
           <aside className="nodeDetails">
-            <h3>Informations du noeud</h3>
-            {selectedNode ? <DataTable rows={[selectedNode]} /> : <p>Aucun noeud selectionne.</p>}
+            {selectedNode ? (
+              <>
+                <div className="nodeDetailsHeader">
+                  <span className={`nodeTypeBadge nodeType-${String((selectedNode as Record<string,unknown>).type ?? '').toLowerCase().replace(/[^a-z]/g, '')}`}>
+                    {String((selectedNode as Record<string,unknown>).type ?? '')}
+                  </span>
+                  <button className="nodeDetailsClose" aria-label="Désélectionner" onClick={() => setSelectedNode(null)}>✕</button>
+                </div>
+                <dl className="nodeDetailsList">
+                  {Object.entries(selectedNode as Record<string, unknown>)
+                    .filter(([k]) => k !== 'type')
+                    .map(([key, value]) => (
+                      <div key={key} className="nodeDetailsRow">
+                        <dt>{key.replace(/_/g, ' ')}</dt>
+                        <dd>{value == null || value === '' ? <span className="nodeDetailsEmpty">—</span> : String(value)}</dd>
+                      </div>
+                    ))}
+                </dl>
+              </>
+            ) : (
+              <div className="nodeDetailsPlaceholder">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3" />
+                  <line x1="12" y1="3" x2="12" y2="7" /><line x1="12" y1="17" x2="12" y2="21" />
+                  <line x1="3" y1="12" x2="7" y2="12" /><line x1="17" y1="12" x2="21" y2="12" />
+                </svg>
+                <p>Cliquez sur un nœud du graphe pour afficher ses détails ici.</p>
+              </div>
+            )}
           </aside>
         </div>
       )}
@@ -831,9 +862,14 @@ function SchoolHierarchyGraph({ rows }: { rows: Array<Record<string, unknown>> }
   );
 }
 
-function GraphNode({ label, type, count, level, onClick }: { label: string; type: string; count: string; level: string; onClick: () => void }) {
+function GraphNode({ label, type, count, level, selected, onClick }: { label: string; type: string; count: string; level: string; selected?: boolean; onClick: () => void }) {
   return (
-    <button className={`graphNode ${level}`} onClick={onClick} title={`${type}: ${label}`}>
+    <button
+      className={`graphNode ${level}${selected ? ' active' : ''}`}
+      onClick={onClick}
+      title={`${type} : ${label}`}
+      aria-pressed={selected}
+    >
       <span>{type}</span>
       <strong>{label}</strong>
       <small>{count}</small>

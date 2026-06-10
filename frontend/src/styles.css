@@ -294,16 +294,42 @@ h1, h2, p {
 
 .graphFrameBody {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: minmax(0, 1fr) 300px;
   gap: 16px;
   align-items: start;
+}
+
+@media (max-width: 900px) {
+  .graphFrameBody {
+    grid-template-columns: 1fr;
+  }
+  .nodeDetails {
+    position: static;
+  }
 }
 
 .hierarchyGraph {
   display: grid;
   gap: 16px;
-  overflow: auto;
-  padding: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 12px 8px;
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.hierarchyGraph::-webkit-scrollbar {
+  height: 6px;
+}
+
+.hierarchyGraph::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hierarchyGraph::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
 }
 
 .graphLevel {
@@ -338,24 +364,44 @@ h1, h2, p {
   border: 2px solid var(--accent);
   background: var(--surface-muted);
   color: var(--text);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
 }
 
 .graphNode:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  background: var(--accent-soft);
+}
+
+.graphNode.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.graphNode.active span,
+.graphNode.active small {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.graphNode.active strong {
+  color: #fff;
 }
 
 .graphNode span {
   color: var(--muted);
   font-size: 9px;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .graphNode strong {
   width: 100%;
   color: var(--text-strong);
   font-size: 10px;
-  line-height: 1.1;
+  line-height: 1.2;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -371,8 +417,32 @@ h1, h2, p {
   border-color: var(--success);
 }
 
+.graphNode.department:hover,
+.graphNode.department.active {
+  background: color-mix(in srgb, var(--success) 14%, var(--surface-muted));
+  border-color: var(--success);
+  box-shadow: 0 4px 14px rgba(39, 107, 91, 0.3);
+}
+
+.graphNode.department.active {
+  background: var(--success);
+  color: #fff;
+}
+
 .graphNode.subdivision {
   border-color: #f59e0b;
+}
+
+.graphNode.subdivision:hover,
+.graphNode.subdivision.active {
+  background: color-mix(in srgb, #f59e0b 14%, var(--surface-muted));
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+}
+
+.graphNode.subdivision.active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #fff;
 }
 
 .graphNode.school {
@@ -382,15 +452,148 @@ h1, h2, p {
   border-color: #8b5cf6;
 }
 
+.graphNode.school:hover,
+.graphNode.school.active {
+  background: color-mix(in srgb, #8b5cf6 14%, var(--surface-muted));
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+}
+
+.graphNode.school.active {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  color: #fff;
+}
+
+/* ── Node details panel ─────────────────────────────────────── */
+
 .nodeDetails {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   position: sticky;
   top: 16px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  min-height: 220px;
+}
+
+.nodeDetailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
   background: var(--surface-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.nodeTypeBadge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.nodeType-rgion    { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.nodeType-dpartement { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+.nodeType-arrondissement { background: color-mix(in srgb, #f59e0b 14%, transparent); color: #b45309; }
+.nodeType-tablissement { background: color-mix(in srgb, #8b5cf6 12%, transparent); color: #6d28d9; }
+
+.nodeDetailsClose {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.nodeDetailsClose:hover {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+.nodeDetailsList {
+  margin: 0;
+  padding: 8px 0;
+  display: grid;
+  gap: 0;
+}
+
+.nodeDetailsRow {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px;
+  padding: 7px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  align-items: start;
+}
+
+.nodeDetailsRow:last-child {
+  border-bottom: none;
+}
+
+.nodeDetailsRow dt {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: capitalize;
+  padding-top: 1px;
+}
+
+.nodeDetailsRow dd {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  word-break: break-word;
+}
+
+.nodeDetailsEmpty {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.nodeDetailsPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 20px;
+  color: var(--muted);
+  text-align: center;
+  flex: 1;
+}
+
+.nodeDetailsPlaceholder svg {
+  opacity: 0.35;
+}
+
+.nodeDetailsPlaceholder p {
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 200px;
+}
+
+.graphEmptyState {
+  padding: 24px;
+  background: var(--surface-muted);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
 }
 
 .chartGrid {
