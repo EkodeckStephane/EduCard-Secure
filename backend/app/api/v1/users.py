@@ -18,7 +18,31 @@ router = APIRouter(tags=["users"])
 
 def _user_response(db: Session, user: User) -> UserResponse:
     roles = db.execute(select(Role.code).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user.id)).scalars().all()
-    return UserResponse(id=user.id, public_id=user.public_id, username=user.username, display_name=user.display_name, status=user.status, preferred_language=user.preferred_language or "fr", roles=list(roles))
+    scopes = db.execute(select(UserScope).where(UserScope.user_id == user.id)).scalars().all()
+    return UserResponse(
+        id=user.id,
+        public_id=user.public_id,
+        username=user.username,
+        display_name=user.display_name,
+        status=user.status,
+        preferred_language=user.preferred_language or "fr",
+        roles=list(roles),
+        scopes=[
+            {"id": row.id, "scope_type": row.scope_type, "region_id": row.region_id, "department_id": row.department_id, "school_id": row.school_id}
+            for row in scopes
+        ],
+    )
+
+
+@router.get("/users/check-username")
+def check_username(
+    q: str,
+    _: CurrentPrincipal = Depends(require_permission("user:create")),
+    db: Session = Depends(get_db),
+) -> dict:
+    normalized = q.strip().lower()
+    exists = db.execute(select(User.id).where(User.username == normalized)).first() is not None
+    return {"username": normalized, "available": bool(normalized) and not exists}
 
 
 @router.get("/users", response_model=list[UserResponse])
@@ -123,4 +147,21 @@ def assign_scope(
     db.add(scope)
     record_security_event(db, "SCOPE_ASSIGNED", "HIGH", user_id=principal.user.id, resource_type="user", resource_public_id=user.public_id)
     db.commit()
-    return {"status": "scope_assigned"}
+    return {"status": "scope_assigned", "scope_id": scope.id}
+
+
+@router.delete("/users/{user_id}/scopes/{scope_id}", dependencies=[Depends(require_csrf)])
+def remove_scope(
+    user_id: int,
+    scope_id: int,
+    principal: CurrentPrincipal = Depends(require_permission("user:update")),
+    db: Session = Depends(get_db),
+) -> dict:
+    scope = db.get(UserScope, scope_id)
+    user = db.get(User, user_id)
+    if not user or not scope or scope.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scope not found")
+    db.delete(scope)
+    record_security_event(db, "SCOPE_REMOVED", "HIGH", user_id=principal.user.id, resource_type="user", resource_public_id=user.public_id)
+    db.commit()
+    return {"status": "scope_removed"}

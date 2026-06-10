@@ -1,6 +1,8 @@
 from datetime import date
 
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class StudentCreateRequest(BaseModel):
@@ -22,6 +24,43 @@ class StudentUpdateRequest(BaseModel):
     record_version: int
 
 
+class StudentArchiveRequest(BaseModel):
+    reason_code: Literal[
+        "ADMINISTRATIVE_DECISION",
+        "PROLONGED_ABSENCE",
+        "DUPLICATE_RESOLVED",
+        "GRADUATION",
+        "OTHER",
+    ]
+    reason_text: str | None = Field(default=None, max_length=1000)
+    record_version: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def validate_reason(self):
+        if self.reason_code == "OTHER" and len((self.reason_text or "").strip()) < 10:
+            raise ValueError("reason_text must contain at least 10 characters for OTHER")
+        return self
+
+
+class DuplicateDecisionRequest(BaseModel):
+    reference_student_id: int
+    reason: str = Field(min_length=10, max_length=1000)
+
+
+class EnrollmentWithdrawRequest(BaseModel):
+    exit_type: Literal["GRADUATED", "WITHDRAWN", "HIGHER_EDUCATION", "DECEASED", "OTHER"]
+    exit_date: date
+    reason: str = Field(min_length=10, max_length=1000)
+
+
+class StudentReenrollRequest(BaseModel):
+    school_id: int
+    class_id: int
+    academic_year_id: int
+    entry_date: date
+    reason: str = Field(min_length=10, max_length=1000)
+
+
 class StudentResponse(BaseModel):
     id: int
     public_id: str
@@ -29,10 +68,17 @@ class StudentResponse(BaseModel):
     last_name: str
     first_name: str
     birth_date: date
+    gender: str | None = None
     status: str
     current_school_id: int | None
     current_classroom_id: int | None
     record_version: int
+    photo_url: str | None = None
+    current_enrollment: dict | None = None
+    active_card_status: str | None = None
+    active_services_count: int = 0
+    last_activity: dict | None = None
+    guardian: dict | None = None
 
 
 class StudentListResponse(BaseModel):
@@ -52,6 +98,7 @@ class EnrollmentCreateRequest(BaseModel):
 
 class TransferCreateRequest(BaseModel):
     student_id: int
+    expected_from_school_id: int | None = None
     to_school_id: int
     to_classroom_id: int | None = None
     comment: str | None = Field(default=None, max_length=255)

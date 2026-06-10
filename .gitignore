@@ -23,6 +23,8 @@ build/
 coverage/
 .vite/
 *.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
 
 # Local runtime data
 logs/
@@ -51,3 +53,5 @@ private/
 *.sql.gz
 *.dump
 *.bak
+# Local protected uploads
+backend/storage/

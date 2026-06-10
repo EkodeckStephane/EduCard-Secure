@@ -54,7 +54,43 @@ def transition_card(db: Session, card_id: int, action: str, principal: CurrentPr
         raise HTTPException(status_code=404, detail="Card not found")
     previous = card.status
     now = datetime.utcnow()
-    if action == "activate":
+    allowed = {
+        # Activation from REQUESTED remains an API convenience, but it records
+        # the mandatory ISSUED intermediate state before activation.
+        "REQUESTED": {"issue", "activate"},
+        "ISSUED": {"activate"},
+        "ACTIVE": {"suspend", "revoke"},
+        "SUSPENDED": {"reactivate", "revoke"},
+        "REVOKED": {"replace"},
+    }
+    if action not in allowed.get(previous, set()):
+        raise HTTPException(status_code=409, detail=f"Transition {action} is not allowed from {previous}")
+    if action == "activate" and previous == "REQUESTED":
+        card.status = "ISSUED"
+        card.issued_at = now
+        db.add(
+            CardStatusHistory(
+                card_id=card.id,
+                previous_status="REQUESTED",
+                new_status="ISSUED",
+                reason="AUTOMATIC_ISSUANCE_BEFORE_ACTIVATION",
+                changed_by=principal.user.id,
+            )
+        )
+        db.add(
+            CardIssuanceEvent(
+                card_id=card.id,
+                event_type="ISSUED",
+                processed_by=principal.user.id,
+                details_minimized="Automatic issuance before activation",
+            )
+        )
+        previous = "ISSUED"
+    if action == "issue":
+        card.status = "ISSUED"
+        card.issued_at = now
+        event = "ISSUED"
+    elif action == "activate":
         card.status = "ACTIVE"
         card.activated_at = now
         event = "ACTIVATED"
@@ -78,8 +114,6 @@ def transition_card(db: Session, card_id: int, action: str, principal: CurrentPr
         db.add(CardIssuanceEvent(card_id=replacement.id, event_type="REQUESTED", requested_by=principal.user.id, details_minimized="Replacement card"))
     else:
         raise HTTPException(status_code=400, detail="Unsupported card action")
-    if action == "activate" and not card.issued_at:
-        card.issued_at = now
     db.add(CardStatusHistory(card_id=card.id, previous_status=previous, new_status=card.status, reason=reason, changed_by=principal.user.id))
     db.add(CardIssuanceEvent(card_id=card.id, event_type=event, processed_by=principal.user.id, details_minimized=reason))
     record_security_event(db, f"CARD_{event}", "HIGH", principal.user.id, "card", card.public_id)

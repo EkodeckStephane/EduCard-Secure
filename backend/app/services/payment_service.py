@@ -22,7 +22,9 @@ def create_mock_payment(
     school_year_id: int,
     student_id: int | None,
     reason: str,
-    simulate_error: bool,
+    simulation_result: str,
+    external_reference: str | None = None,
+    notes: str | None = None,
 ) -> PaymentTransaction:
     assert_school_scope(db, principal, school_id)
     if student_id:
@@ -40,7 +42,11 @@ def create_mock_payment(
         record_security_event(db, "PAYMENT_IDEMPOTENT_REPLAY", "INFO", principal.user.id, "payment", existing.public_id)
         db.commit()
         return existing
-    result = PROVIDERS[provider_code].create(idempotency_key, simulate_error)
+    if simulation_result == "NETWORK_ERROR":
+        raise HTTPException(status_code=503, detail="Simulated network failure")
+    if simulation_result == "TIMEOUT":
+        raise HTTPException(status_code=504, detail="Simulated provider timeout")
+    result = PROVIDERS[provider_code].create(idempotency_key, simulation_result == "INSUFFICIENT_FUNDS")
     tx = PaymentTransaction(
         public_id=str(uuid4()),
         payment_provider_id=provider.id,
@@ -53,6 +59,9 @@ def create_mock_payment(
         currency="XAF",
         category=category,
         status=result.status,
+        external_reference=external_reference,
+        error_code="INSUFFICIENT_FUNDS" if simulation_result == "INSUFFICIENT_FUNDS" else None,
+        notes_minimized=notes,
         is_demo=True,
     )
     db.add(tx)
@@ -63,7 +72,7 @@ def create_mock_payment(
     return tx
 
 
-def reconcile_payment(db: Session, principal: CurrentPrincipal, payment_id: int, notes: str | None) -> PaymentReconciliation:
+def reconcile_payment(db: Session, principal: CurrentPrincipal, payment_id: int, notes: str | None, result: str = "SUCCESS", actual_amount: float | None = None) -> PaymentReconciliation:
     tx = db.get(PaymentTransaction, payment_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Payment not found")
@@ -71,10 +80,12 @@ def reconcile_payment(db: Session, principal: CurrentPrincipal, payment_id: int,
     existing = db.execute(select(PaymentReconciliation).where(PaymentReconciliation.payment_transaction_id == payment_id)).scalar_one_or_none()
     if existing:
         return existing
-    tx.status = "RECONCILED"
+    tx.status = "RECONCILED" if result in {"SUCCESS", "PARTIAL"} else result
+    if result == "PARTIAL" and actual_amount is not None:
+        tx.amount = actual_amount
     row = PaymentReconciliation(
         payment_transaction_id=payment_id,
-        reconciliation_status="MATCHED",
+        reconciliation_status={"SUCCESS": "MATCHED", "PARTIAL": "PARTIAL", "REJECTED": "REJECTED", "DUPLICATE": "DUPLICATE"}[result],
         matched_at=datetime.utcnow(),
         matched_by=principal.user.id,
         notes_minimized=notes,

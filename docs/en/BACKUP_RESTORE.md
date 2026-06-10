@@ -76,3 +76,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify_backup.ps1 
 
 Production backup retention, encryption, access control, offsite storage and
 restore drills require institutional approval and legal validation.
+# Application backup logging
+
+Configure `BACKUP_SERVICE_TOKEN` locally in `.env`, then restart the backend.
+The `backup_database.ps1`, `verify_backup.ps1` and `restore_database.ps1`
+scripts publish their results to the internal `POST /api/v1/backups/log`
+endpoint.
+
+The route is omitted from Swagger and never receives the complete backup file
+path, only an opaque reference. API unavailability does not invalidate an
+already successful backup; the script prints an explicit warning instead.

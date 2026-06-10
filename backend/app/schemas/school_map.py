@@ -7,6 +7,8 @@ class RegionCreateRequest(BaseModel):
     code: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=160)
     capital: str | None = Field(default=None, max_length=160)
+    submit_for_validation: bool = False
+    justification: str | None = Field(default=None, max_length=1000)
 
 
 class DepartmentCreateRequest(BaseModel):
@@ -14,6 +16,8 @@ class DepartmentCreateRequest(BaseModel):
     code: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=160)
     capital: str | None = Field(default=None, max_length=160)
+    submit_for_validation: bool = False
+    justification: str | None = Field(default=None, max_length=1000)
 
 
 class SubdivisionCreateRequest(BaseModel):
@@ -21,6 +25,8 @@ class SubdivisionCreateRequest(BaseModel):
     code: str = Field(min_length=2, max_length=40)
     name: str = Field(min_length=2, max_length=160)
     capital: str | None = Field(default=None, max_length=160)
+    submit_for_validation: bool = False
+    justification: str | None = Field(default=None, max_length=1000)
 
 
 class SchoolCreateRequest(BaseModel):
@@ -30,6 +36,8 @@ class SchoolCreateRequest(BaseModel):
     school_type: str = Field(default="GENERAL", max_length=80)
     education_subsystem: str = Field(default="GENERAL_FR", max_length=80)
     status: str = Field(default="ACTIVE", max_length=40)
+    submit_for_validation: bool = False
+    justification: str | None = Field(default=None, max_length=1000)
 
 
 class ClassroomCreateRequest(BaseModel):
@@ -39,6 +47,20 @@ class ClassroomCreateRequest(BaseModel):
     code: str = Field(min_length=1, max_length=60)
     label: str = Field(min_length=2, max_length=120)
     capacity: int | None = Field(default=None, ge=0)
+    submit_for_validation: bool = False
+    justification: str | None = Field(default=None, max_length=1000)
+
+
+class ValidationDecisionRequest(BaseModel):
+    comment: str | None = Field(default=None, max_length=1000)
+
+
+class ValidationRejectRequest(BaseModel):
+    reason: str = Field(min_length=5, max_length=1000)
+
+
+class GradeLevelUpdateRequest(BaseModel):
+    active: bool
 
 
 class SchoolYearCreateRequest(BaseModel):

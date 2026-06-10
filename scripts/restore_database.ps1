@@ -5,6 +5,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$startedAt = Get-Date
 
 $mysql = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe"
 
@@ -40,6 +41,20 @@ try {
     & $mysql -h localhost -P 3306 -u $dbUser --default-character-set=utf8mb4 educard_secure -e "SOURCE $BackupFile"
     if ($LASTEXITCODE -ne 0) { throw "Restore failed with exit code $LASTEXITCODE" }
     Write-Host "Restore completed."
+    & (Join-Path $PSScriptRoot "log_backup_event.ps1") `
+        -EventType "BACKUP_RESTORED" -Status "RESTORE_COMPLETED" `
+        -FileReference ([IO.Path]::GetFileNameWithoutExtension($BackupFile)) `
+        -ChecksumPresent (Test-Path -LiteralPath $hashFile) `
+        -FileSizeBytes (Get-Item -LiteralPath $BackupFile).Length `
+        -StartedAt $startedAt -FinishedAt (Get-Date)
+} catch {
+    & (Join-Path $PSScriptRoot "log_backup_event.ps1") `
+        -EventType "BACKUP_FAILED" -Status "FAILED" `
+        -FileReference ([IO.Path]::GetFileNameWithoutExtension($BackupFile)) `
+        -ChecksumPresent (Test-Path -LiteralPath $hashFile) `
+        -FileSizeBytes (Get-Item -LiteralPath $BackupFile).Length `
+        -StartedAt $startedAt -FinishedAt (Get-Date)
+    throw
 } finally {
     Remove-Item Env:\MYSQL_PWD -ErrorAction SilentlyContinue
 }

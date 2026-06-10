@@ -18,6 +18,7 @@ def create_entitlement(
     valid_from: datetime,
     valid_until: datetime | None,
     status: str,
+    notes: str | None = None,
 ) -> ServiceEntitlement:
     assert_student_scope(db, principal, student_id)
     if not db.get(ServiceType, service_type_id) or not db.get(ServiceProvider, service_provider_id):
@@ -29,6 +30,7 @@ def create_entitlement(
         valid_from=valid_from,
         valid_until=valid_until,
         status=status,
+        notes_minimized=notes,
         is_demo=True,
     )
     db.add(row)
@@ -39,7 +41,7 @@ def create_entitlement(
     return row
 
 
-def verify_service(db: Session, principal: CurrentPrincipal, student_id: int, service_type_id: int, card_id: int | None = None) -> dict:
+def verify_service(db: Session, principal: CurrentPrincipal, student_id: int, service_type_id: int, card_id: int | None = None, record_event: bool = True) -> dict:
     assert_student_scope(db, principal, student_id)
     if card_id:
         assert_card_scope(db, principal, card_id)
@@ -53,6 +55,8 @@ def verify_service(db: Session, principal: CurrentPrincipal, student_id: int, se
         )
     ).scalars().first()
     allowed = bool(entitlement and (entitlement.valid_until is None or entitlement.valid_until >= now))
+    if not record_event:
+        return {"result": "ALLOWED" if allowed else "DENIED", "entitlement_id": entitlement.id if entitlement else None, "reason": None if allowed else "NO_ENTITLEMENT"}
     event = ServiceVerificationEvent(
         service_entitlement_id=entitlement.id if entitlement else None,
         student_id=student_id,

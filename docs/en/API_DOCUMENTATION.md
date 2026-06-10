@@ -118,3 +118,59 @@ Small counts are masked as `MASKED`.
 - `GET /backups`: requires `backup:read`.
 
 OpenAPI is available at `/docs` when the FastAPI app is running.
+# Interactive OpenAPI interface
+
+- Swagger UI: `/docs`
+- ReDoc: `/redoc`
+- OpenAPI JSON schema: `/openapi.json`
+
+To test a protected route:
+
+1. Execute `POST /api/v1/auth/login`.
+2. The browser keeps the session cookie for the local API.
+3. Copy the returned `csrf_token`.
+4. For protected write operations, enter this value in the
+   `X-CSRF-Token` parameter displayed by Swagger.
+5. Backend RBAC and scope enforcement remain active.
+
+## Routes added by the redesign
+
+- `GET /api/v1/dashboard/kpi?period=today|7d|30d`: role-specific KPIs,
+  previous-period comparison and trend series.
+- `GET /api/v1/cards/{id}/pdf`: CR80 PDF with an available photo and a
+  short-lived signed print QR.
+- `POST /api/v1/exports/portability`: Ed25519-signed personal JSON export.
+  The body contains `student_id` and a `reason` of at least 20 characters.
+
+These routes enforce RBAC, scopes, CSRF for write operations and audit logging.
+# Volume 3 supplement
+
+The consolidated student record exposes `/students/{id}/summary`,
+`/enrollments`, `/cards`, `/services` and `/duplicates`. Structured archiving
+uses `PATCH /students/{id}/archive`.
+
+Specialized dashboards are grouped under `/dashboard/cards/*`,
+`/dashboard/attendance/*`, `/dashboard/payments/*`, `/dashboard/security/*`
+and `/dashboard/services/*`.
+
+`GET /backups/summary` feeds the read-only summary.
+`POST /backups/log` is internal, protected by `X-Service-Token`, and omitted
+from the public OpenAPI schema.
+## Common error format
+
+Application HTTP errors use the following structure:
+
+```json
+{
+  "detail": "Human-readable description or context object",
+  "code": "STABLE_CODE"
+}
+```
+
+Common codes include `AUTHENTICATION_REQUIRED`, `ACCESS_DENIED`, `NOT_FOUND`,
+`CONFLICT`, `RECORD_VERSION_CONFLICT`, `VALIDATION_ERROR`, and `RATE_LIMITED`.
+The `detail` field remains compatible with existing clients.
+
+Transfers may include `expected_from_school_id`. The request is rejected with
+`409 CONFLICT` when the student's current school changed between loading and
+submitting the form.

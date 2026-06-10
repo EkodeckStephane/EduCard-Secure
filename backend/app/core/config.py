@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     field_encryption_key: str = Field(default="", alias="FIELD_ENCRYPTION_KEY")
     qr_signing_private_key_path: str = Field(default="", alias="QR_SIGNING_PRIVATE_KEY_PATH")
     qr_signing_public_key_path: str = Field(default="", alias="QR_SIGNING_PUBLIC_KEY_PATH")
+    backup_service_token: str = Field(default="", alias="BACKUP_SERVICE_TOKEN")
+    demo_privileged_totp_secret: str = Field(default="", alias="DEMO_PRIVILEGED_TOTP_SECRET")
 
     def sqlalchemy_database_url(self) -> str:
         if self.database_url:

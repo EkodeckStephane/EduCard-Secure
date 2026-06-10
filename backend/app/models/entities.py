@@ -59,6 +59,7 @@ class User(Base, IdMixin, PublicIdMixin, TimestampMixin):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
     mfa_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     preferred_language: Mapped[str] = mapped_column(String(5), default="fr", nullable=False)
+    preferred_theme: Mapped[str] = mapped_column(String(10), default="system", nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
@@ -117,6 +118,7 @@ class Region(Base, IdMixin, TimestampMixin):
     code: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     capital: Mapped[str | None] = mapped_column(String(160))
+    status: Mapped[str] = mapped_column(String(40), default="ACTIVE", nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -130,6 +132,7 @@ class Department(Base, IdMixin, TimestampMixin):
     code: Mapped[str] = mapped_column(String(40), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     capital: Mapped[str | None] = mapped_column(String(160))
+    status: Mapped[str] = mapped_column(String(40), default="ACTIVE", nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -143,6 +146,7 @@ class Subdivision(Base, IdMixin, TimestampMixin):
     code: Mapped[str] = mapped_column(String(40), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     capital: Mapped[str | None] = mapped_column(String(160))
+    status: Mapped[str] = mapped_column(String(40), default="ACTIVE", nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -183,6 +187,8 @@ class GradeLevel(Base, IdMixin):
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     education_subsystem: Mapped[str] = mapped_column(String(80), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    cycle: Mapped[str | None] = mapped_column(String(80))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class Classroom(Base, IdMixin, TimestampMixin):
@@ -197,6 +203,7 @@ class Classroom(Base, IdMixin, TimestampMixin):
     code: Mapped[str] = mapped_column(String(60), nullable=False)
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     capacity: Mapped[int | None] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(40), default="ACTIVE", nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -226,7 +233,9 @@ class Session(Base, IdMixin):
     csrf_token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     ip_context: Mapped[str | None] = mapped_column(String(80))
     user_agent_hash: Mapped[str | None] = mapped_column(String(255))
+    user_agent_summary: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    last_active_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
 
@@ -280,6 +289,13 @@ class SecurityEvent(Base, IdMixin):
     resource_type: Mapped[str | None] = mapped_column(String(80))
     resource_public_id: Mapped[str | None] = mapped_column(String(80))
     details_minimized: Mapped[str | None] = mapped_column(Text)
+    alert_status: Mapped[str] = mapped_column(String(40), default="OPEN", nullable=False)
+    acknowledged_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime)
+    acknowledgement_comment: Mapped[str | None] = mapped_column(Text)
+    resolved_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime)
+    resolution_note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
 
@@ -511,6 +527,12 @@ class ServiceType(Base, IdMixin):
     code: Mapped[str] = mapped_column(String(60), unique=True, nullable=False)
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str | None] = mapped_column(String(80))
+    icon: Mapped[str | None] = mapped_column(String(80))
+    eligibility_rules: Mapped[str | None] = mapped_column(Text)
+    calendar_rules: Mapped[str | None] = mapped_column(Text)
+    consumption_limits: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class ServiceProvider(Base, IdMixin, PublicIdMixin):
@@ -521,6 +543,11 @@ class ServiceProvider(Base, IdMixin, PublicIdMixin):
 
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     provider_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    code: Mapped[str | None] = mapped_column(String(60), unique=True)
+    contact_name: Mapped[str | None] = mapped_column(String(160))
+    phone_masked: Mapped[str | None] = mapped_column(String(80))
+    school_ids: Mapped[str | None] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_mock: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -536,6 +563,7 @@ class ServiceEntitlement(Base, IdMixin, TimestampMixin):
     valid_from: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     valid_until: Mapped[datetime | None] = mapped_column(DateTime)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
+    notes_minimized: Mapped[str | None] = mapped_column(Text)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -587,6 +615,9 @@ class PaymentTransaction(Base, IdMixin, PublicIdMixin):
     currency: Mapped[str] = mapped_column(String(3), default="XAF", nullable=False)
     category: Mapped[str] = mapped_column(String(80), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
+    external_reference: Mapped[str | None] = mapped_column(String(120))
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    notes_minimized: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
@@ -612,6 +643,11 @@ class Incident(Base, IdMixin, PublicIdMixin, TimestampMixin):
     __table_args__ = (Index("ix_incidents_status_severity", "status", "severity"), MYSQL_TABLE)
 
     category: Mapped[str] = mapped_column(String(80), nullable=False)
+    title: Mapped[str | None] = mapped_column(String(120))
+    description_minimized: Mapped[str | None] = mapped_column(Text)
+    resource_type: Mapped[str | None] = mapped_column(String(80))
+    resource_public_id: Mapped[str | None] = mapped_column(String(80))
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime)
     priority: Mapped[str] = mapped_column(String(40), nullable=False)
     severity: Mapped[str] = mapped_column(String(40), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -641,6 +677,10 @@ class DataAccessRequest(Base, IdMixin, PublicIdMixin, TimestampMixin):
 
     request_type: Mapped[str] = mapped_column(String(80), nullable=False)
     subject_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    subject_last_name: Mapped[str | None] = mapped_column(String(120))
+    subject_first_name: Mapped[str | None] = mapped_column(String(120))
+    subject_contact_masked: Mapped[str | None] = mapped_column(String(160))
+    request_object: Mapped[str | None] = mapped_column(Text)
     student_id: Mapped[int | None] = mapped_column(ForeignKey("students.id"))
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
@@ -654,6 +694,11 @@ class RetentionRule(Base, IdMixin, TimestampMixin):
     __table_args__ = MYSQL_TABLE
 
     resource_type: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    name: Mapped[str | None] = mapped_column(String(160))
+    trigger_type: Mapped[str | None] = mapped_column(String(80))
+    duration_unit: Mapped[str | None] = mapped_column(String(20))
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime)
     retention_period_days: Mapped[int | None] = mapped_column(Integer)
     action_on_expiry: Mapped[str] = mapped_column(String(80), nullable=False)
     status: Mapped[str] = mapped_column(String(40), nullable=False)
@@ -669,6 +714,11 @@ class DataProcessingRegister(Base, IdMixin, TimestampMixin):
     purpose: Mapped[str] = mapped_column(Text, nullable=False)
     data_categories: Mapped[str] = mapped_column(Text, nullable=False)
     legal_basis_note: Mapped[str | None] = mapped_column(Text)
+    data_subjects: Mapped[str | None] = mapped_column(Text)
+    controller_name: Mapped[str | None] = mapped_column(String(255))
+    processors_note: Mapped[str | None] = mapped_column(Text)
+    security_measures: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(40), default="ACTIVE", nullable=False)
     retention_note: Mapped[str | None] = mapped_column(Text)
     requires_legal_validation: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
@@ -684,6 +734,11 @@ class Export(Base, IdMixin, PublicIdMixin):
     status: Mapped[str] = mapped_column(String(40), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+    format: Mapped[str] = mapped_column(String(20), default="CSV", nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    filters_json: Mapped[str | None] = mapped_column(Text)
+    checksum_sha256: Mapped[str | None] = mapped_column(String(64))
+    downloaded_at: Mapped[datetime | None] = mapped_column(DateTime)
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
@@ -724,6 +779,23 @@ class NotificationEvent(Base, IdMixin):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
 
+class AdministrativeValidation(Base, IdMixin, TimestampMixin):
+    """Hierarchical validation request for administrative reference data."""
+
+    __tablename__ = "administrative_validations"
+    __table_args__ = (Index("ix_admin_validation_status_type", "status", "entity_type"), MYSQL_TABLE)
+
+    entity_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    entity_id: Mapped[int] = mapped_column(ID_TYPE, nullable=False)
+    entity_label: Mapped[str] = mapped_column(String(180), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="PENDING_VALIDATION", nullable=False)
+    justification: Mapped[str | None] = mapped_column(Text)
+    proposed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    review_comment: Mapped[str | None] = mapped_column(Text)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
 class BackupEvent(Base, IdMixin):
     """Backup or restore event."""
 
@@ -736,3 +808,6 @@ class BackupEvent(Base, IdMixin):
     started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    checksum_present: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    file_size_bytes: Mapped[int | None] = mapped_column(Integer)
+    operator: Mapped[str | None] = mapped_column(String(120))

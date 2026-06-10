@@ -18,9 +18,9 @@ class DashboardFilters(BaseModel):
 
 
 class ExportCreateRequest(BaseModel):
-    export_type: str = Field(pattern="^(DASHBOARD_SUMMARY|DASHBOARD_CARDS|DASHBOARD_ATTENDANCE|DASHBOARD_PAYMENTS|DASHBOARD_SECURITY|DASHBOARD_SERVICES|INDIVIDUAL_STUDENT)$")
-    format: str = Field(default="CSV", pattern="^CSV$")
-    reason: str = Field(min_length=8, max_length=255)
+    export_type: str = Field(pattern="^(DASHBOARD_SUMMARY|DASHBOARD_CARDS|DASHBOARD_ATTENDANCE|DASHBOARD_PAYMENTS|DASHBOARD_SECURITY|DASHBOARD_SERVICES|INDIVIDUAL_STUDENT|STUDENTS|CARDS|ATTENDANCE|SERVICES|PAYMENTS|AUDIT|ANOMALIES|PORTABILITY)$")
+    format: str = Field(default="CSV", pattern="^(CSV|JSON|XLSX)$")
+    reason: str = Field(min_length=20, max_length=1000)
     filters: DashboardFilters = Field(default_factory=DashboardFilters)
     student_id: int | None = None
 
@@ -33,3 +33,8 @@ class ExportResponse(BaseModel):
     created_at: str
     expires_at: str | None
     filename: str
+    format: str = "CSV"
+    reason: str | None = None
+    filters: dict = Field(default_factory=dict)
+    checksum_sha256: str | None = None
+    downloaded_at: str | None = None

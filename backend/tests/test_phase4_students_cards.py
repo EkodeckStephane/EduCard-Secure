@@ -9,6 +9,8 @@ from app.main import app
 from app.core.database import SessionLocal
 from app.models.entities import (
     Card,
+    CardIssuanceEvent,
+    CardStatusHistory,
     Classroom,
     Department,
     GradeLevel,
@@ -146,6 +148,7 @@ def test_student_creation_search_pagination_duplicates_archive_and_history() -> 
 
     stale = client.patch(f"/api/v1/students/{student['id']}", json={"record_version": 999, "first_name": "Alicia"}, headers={"X-CSRF-Token": csrf})
     assert stale.status_code == 409
+    assert stale.json()["code"] == "RECORD_VERSION_CONFLICT"
 
     updated = client.patch(f"/api/v1/students/{student['id']}", json={"record_version": student["record_version"], "first_name": "Alicia"}, headers={"X-CSRF-Token": csrf})
     assert updated.status_code == 200
@@ -178,6 +181,20 @@ def test_enrollment_transfer_card_lifecycle_scope_and_logging() -> None:
     assert created.status_code == 201
     student = created.json()
 
+    stale_transfer = client.post(
+        "/api/v1/transfers",
+        json={
+            "student_id": student["id"],
+            "expected_from_school_id": other_school.id,
+            "to_school_id": other_school.id,
+            "to_classroom_id": other_classroom.id,
+            "comment": "Stale transfer precondition",
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert stale_transfer.status_code == 409
+    assert stale_transfer.json()["code"] == "CONFLICT"
+
     enrollment = client.post(
         "/api/v1/enrollments",
         json={"student_id": student["id"], "school_id": school.id, "classroom_id": classroom.id, "school_year_id": school_year.id, "status": "ACTIVE"},
@@ -187,7 +204,13 @@ def test_enrollment_transfer_card_lifecycle_scope_and_logging() -> None:
 
     transfer = client.post(
         "/api/v1/transfers",
-        json={"student_id": student["id"], "to_school_id": other_school.id, "to_classroom_id": other_classroom.id, "comment": "Transfert demo"},
+        json={
+            "student_id": student["id"],
+            "expected_from_school_id": school.id,
+            "to_school_id": other_school.id,
+            "to_classroom_id": other_classroom.id,
+            "comment": "Transfert demo",
+        },
         headers={"X-CSRF-Token": csrf},
     )
     assert transfer.status_code == 201
@@ -207,6 +230,10 @@ def test_enrollment_transfer_card_lifecycle_scope_and_logging() -> None:
     history = client.get(f"/api/v1/cards/{card['id']}/history")
     assert history.status_code == 200
     assert len(history.json()["status_history"]) >= 5
+    assert any(
+        row["previous_status"] == "REQUESTED" and row["new_status"] == "ISSUED"
+        for row in history.json()["status_history"]
+    )
 
     school_csrf = _school_user_login(school.id)
     denied = client.get(f"/api/v1/students/{student['id']}")
@@ -216,5 +243,68 @@ def test_enrollment_transfer_card_lifecycle_scope_and_logging() -> None:
 
     with SessionLocal() as db:
         assert db.execute(select(Card).where(Card.id == card["id"])).scalar_one().status == "REPLACED"
+        assert db.execute(
+            select(CardIssuanceEvent).where(
+                CardIssuanceEvent.card_id == card["id"],
+                CardIssuanceEvent.event_type == "ISSUED",
+            )
+        ).scalar_one()
         event_count = db.execute(select(SecurityEvent).where(SecurityEvent.event_type.in_(["STUDENT_VIEWED", "CARD_REPLACED"]))).scalars().all()
         assert event_count
+
+
+def test_archive_suspends_active_card_with_history() -> None:
+    csrf = _admin_login()
+    with SessionLocal() as db:
+        school, _, _, classroom, _ = _fixture(db)
+        db.commit()
+
+    created = client.post(
+        "/api/v1/students",
+        json={
+            "last_name": "Archive",
+            "first_name": "Card",
+            "birth_date": "2010-02-03",
+            "school_id": school.id,
+            "classroom_id": classroom.id,
+        },
+        headers={"X-CSRF-Token": csrf},
+    ).json()
+    card = client.post(
+        "/api/v1/cards",
+        json={"student_id": created["id"], "reason": "Archive cascade test"},
+        headers={"X-CSRF-Token": csrf},
+    ).json()
+    activated = client.post(
+        f"/api/v1/cards/{card['id']}/activate",
+        json={"reason": "Activate before archive"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert activated.status_code == 200
+
+    archived = client.patch(
+        f"/api/v1/students/{created['id']}/archive",
+        json={
+            "reason_code": "ADMINISTRATIVE_DECISION",
+            "reason_text": "Archive cascade test",
+            "record_version": created["record_version"],
+        },
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert archived.status_code == 200
+
+    with SessionLocal() as db:
+        assert db.get(Card, card["id"]).status == "SUSPENDED"
+        assert db.execute(
+            select(CardStatusHistory).where(
+                CardStatusHistory.card_id == card["id"],
+                CardStatusHistory.previous_status == "ACTIVE",
+                CardStatusHistory.new_status == "SUSPENDED",
+            )
+        ).scalar_one()
+        assert db.execute(
+            select(CardIssuanceEvent).where(
+                CardIssuanceEvent.card_id == card["id"],
+                CardIssuanceEvent.event_type == "SUSPENDED_BY_STUDENT_ARCHIVE",
+            )
+        ).scalar_one()

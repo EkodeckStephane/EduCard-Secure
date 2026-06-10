@@ -4,6 +4,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$startedAt = Get-Date
 
 $mysqldump = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqldump.exe"
 $backupDir = Join-Path $PSScriptRoot "..\backups"
@@ -42,6 +43,22 @@ try {
     Set-Content -LiteralPath $hashPath -Value "$($hash.Hash)  $(Split-Path -Leaf $output)" -Encoding ASCII -NoNewline
     Write-Host "Backup written to $output"
     Write-Host "SHA256 written to $hashPath"
+    & (Join-Path $PSScriptRoot "log_backup_event.ps1") `
+        -EventType "BACKUP_CREATED" `
+        -Status "SUCCESS" `
+        -FileReference ([IO.Path]::GetFileNameWithoutExtension($output)) `
+        -ChecksumPresent $true `
+        -FileSizeBytes (Get-Item -LiteralPath $output).Length `
+        -StartedAt $startedAt `
+        -FinishedAt (Get-Date)
+} catch {
+    & (Join-Path $PSScriptRoot "log_backup_event.ps1") `
+        -EventType "BACKUP_FAILED" `
+        -Status "FAILED" `
+        -FileReference ([IO.Path]::GetFileNameWithoutExtension($output)) `
+        -StartedAt $startedAt `
+        -FinishedAt (Get-Date)
+    throw
 } finally {
     Remove-Item Env:\MYSQL_PWD -ErrorAction SilentlyContinue
 }

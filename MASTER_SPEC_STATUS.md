@@ -311,8 +311,69 @@ Realise :
 - Selecteur de langue dans le frontend.
 - Repertoires documentaires `docs/fr` et `docs/en`.
 
-Limite :
+Verifie :
 
-- Les anciens fichiers documentaires ont ete recopies dans les deux repertoires
-  pour etablir la structure bilingue. Une revue/traduction humaine complete
-  reste necessaire pour obtenir deux corpus strictement homogenes.
+- Les documentations de reference sont structurees dans `docs/fr` et `docs/en`.
+- Les statuts de redesign existent dans les deux langues.
+- Les workflows frontend refondus utilisent le dictionnaire bilingue central.
+- La preference de langue est conservee par utilisateur.
+
+## Redesign des workflows
+
+Statut : exigences des volumes 1 et 2 implementees, hors integrations
+explicitement exclues.
+
+Realise :
+
+- routage frontend par URL et filtres dashboard persistants ;
+- tendances et comparaisons reelles de periodes ;
+- scanner QR integre a la presence ;
+- PDF CR80 serveur avec photo et QR temporaire ;
+- export personnel de portabilite signe Ed25519 ;
+- validations administratives sur tous les referentiels concernes ;
+- transitions finales des demandes de donnees ;
+- code splitting des ecrans Volume 2 ;
+- gestion globale des chargements et erreurs API ;
+- test navigateur authentifie, navigation et deconnexion.
+
+Hors perimetre :
+
+- integration SMS reelle ;
+- restauration automatique de sauvegarde.
+
+Derniere validation :
+
+- backend : 24 tests reussis ;
+- frontend : 7 tests reussis ;
+- E2E Playwright : 1 test reussi ;
+- lint et build frontend : reussis ;
+- migration : `0005_complete_redesign_workflows (head)`.
+
+Limitations connues :
+
+- bundle principal historique superieur a 500 Ko apres minification ;
+- avertissements de deprecation `datetime.utcnow` ;
+- validations juridiques humaines toujours necessaires.
+
+## Redesign des workflows - Volume 3
+
+Statut : workflows 15, 16 et 17 implementes et verifies.
+
+Realise :
+
+- fiche eleve dediee avec huit onglets, preview de liste et verrouillage optimiste ;
+- sorties, reintegrations, archivage structure et traitement humain des doublons ;
+- cinq dashboards specialises avec filtres URL, graphiques et drill-down ;
+- vingt routes statistiques compatibles MySQL 5.7 ;
+- page Sauvegardes en lecture seule et journalisation scripts vers API ;
+- bootstrap TOTP local des comptes fictifs privilegies, sans secret dans Git.
+
+Derniere validation :
+
+- backend : 27 tests reussis ;
+- frontend : 7 tests reussis ;
+- E2E Playwright : 4 tests reussis ;
+- lint et build frontend : reussis ;
+- migration : `0006_redesign_workflows_volume3 (head)` ;
+- sauvegarde et empreinte SHA-256 : verifiees ;
+- evenements de sauvegarde et verification : journalises.

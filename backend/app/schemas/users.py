@@ -35,3 +35,4 @@ class UserResponse(BaseModel):
     status: str
     preferred_language: str
     roles: list[str]
+    scopes: list[dict] = Field(default_factory=list)

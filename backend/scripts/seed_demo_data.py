@@ -6,6 +6,7 @@ from uuid import uuid4
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sqlalchemy import delete, select
 
+from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.models.entities import (
     AttendanceEvent,
@@ -15,6 +16,7 @@ from app.models.entities import (
     Enrollment,
     GradeLevel,
     Incident,
+    MfaMethod,
     PaymentProvider,
     PaymentReconciliation,
     PaymentTransaction,
@@ -32,6 +34,7 @@ from app.models.entities import (
     UserRole,
     UserScope,
 )
+from app.security.crypto import encrypt_text
 from app.security.passwords import hash_password
 from scripts.seed_cameroon_administrative_data import main as seed_cameroon_administrative_data
 
@@ -134,6 +137,8 @@ def get_or_create_user(session, username: str, display_name: str, password: str)
         session.flush()
     else:
         user.display_name = display_name
+        user.password_hash = hash_password(password)
+        user.status = "ACTIVE"
         user.preferred_language = "fr"
         user.mfa_required = False
         user.is_demo = True
@@ -168,6 +173,29 @@ def ensure_demo_user(
         ),
     ):
         session.add(UserScope(user_id=user.id, scope_type=scope_type, region_id=region_id, department_id=department_id, school_id=school_id))
+    if role.is_privileged:
+        totp_secret = get_settings().demo_privileged_totp_secret.strip()
+        if totp_secret:
+            method = first_or_none(
+                session,
+                select(MfaMethod).where(
+                    MfaMethod.user_id == user.id,
+                    MfaMethod.method_type == "TOTP",
+                    MfaMethod.disabled_at.is_(None),
+                ),
+            )
+            if method:
+                method.secret_encrypted = encrypt_text(totp_secret)
+                method.enabled_at = datetime.now(UTC).replace(tzinfo=None)
+            else:
+                session.add(
+                    MfaMethod(
+                        user_id=user.id,
+                        method_type="TOTP",
+                        secret_encrypted=encrypt_text(totp_secret),
+                        enabled_at=datetime.now(UTC).replace(tzinfo=None),
+                    )
+                )
 
 
 def ensure_school(session, school_data: dict[str, str]) -> School:

@@ -1,5 +1,6 @@
 import csv
 import hashlib
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -37,6 +38,9 @@ def create_export(db: Session, principal: CurrentPrincipal, payload: ExportCreat
         requested_by=principal.user.id,
         status="READY",
         expires_at=datetime.utcnow() + timedelta(hours=24),
+        format=payload.format,
+        reason=payload.reason,
+        filters_json=json.dumps(payload.filters.model_dump(), default=str),
         is_demo=True,
     )
     db.add(row)
@@ -56,6 +60,7 @@ def create_export(db: Session, principal: CurrentPrincipal, payload: ExportCreat
         writer = csv.writer(handle)
         writer.writerows(data)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    row.checksum_sha256 = digest
     db.add(ExportEvent(export_id=row.id, event_type=f"CREATED:{digest}", created_by=principal.user.id))
     record_security_event(db, "EXPORT_CREATED", "HIGH", principal.user.id, "export", row.public_id, payload.reason)
     db.commit()
@@ -72,6 +77,11 @@ def export_to_dict(row: Export) -> dict:
         "created_at": row.created_at.isoformat(),
         "expires_at": row.expires_at.isoformat() if row.expires_at else None,
         "filename": export_filename(row.public_id),
+        "format": row.format,
+        "reason": row.reason,
+        "filters": json.loads(row.filters_json or "{}"),
+        "checksum_sha256": row.checksum_sha256,
+        "downloaded_at": row.downloaded_at.isoformat() if row.downloaded_at else None,
     }
 
 
@@ -90,6 +100,7 @@ def export_download(db: Session, principal: CurrentPrincipal, export_id: int) ->
     if not path.exists():
         raise HTTPException(status_code=404, detail="Export file not found")
     db.add(ExportEvent(export_id=row.id, event_type="DOWNLOADED", created_by=principal.user.id))
+    row.downloaded_at = datetime.utcnow()
     record_security_event(db, "EXPORT_DOWNLOADED", "HIGH", principal.user.id, "export", row.public_id)
     db.commit()
     return path.read_text(encoding="utf-8"), export_filename(row.public_id)

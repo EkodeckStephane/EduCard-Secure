@@ -22,7 +22,7 @@ EduCard Secure est un prototype academique et technique independant. Il ne doit 
 
 ## Pile technique cible
 
-- Frontend : React, TypeScript, Vite.
+- Frontend : React, TypeScript, Vite, MUI, Emotion et Chart.js.
 - Backend : Python, FastAPI, SQLAlchemy, Alembic, Pydantic.
 - Base de donnees : MySQL Server 5.7, InnoDB, utf8mb4.
 - Tests : pytest pour le backend, tests frontend ou end-to-end pour les scenarios critiques.
@@ -81,6 +81,11 @@ npx.cmd eslint .
 - Tableaux de bord, statistiques et exports controles.
 - Audit chaine SHA-256, alertes, incidents, sauvegardes et controles privacy.
 - Preference utilisateur `fr`/`en` pour les libelles principaux du frontend.
+- Shell d'administration adapte du template MIT Creative Tim Material
+  Dashboard React, avec menu lateral responsive et themes clair/sombre.
+
+Les attributions frontend sont documentees dans
+`frontend/THIRD_PARTY_NOTICES.md`.
 
 ## Documentation
 
@@ -118,3 +123,16 @@ cd frontend
 npm.cmd install
 npm.cmd run dev
 ```
+
+## Comptes fictifs privilégiés
+
+Les comptes centraux fictifs exigent un TOTP. Renseigner localement
+`DEMO_PRIVILEGED_TOTP_SECRET` dans `.env`, puis rejouer :
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe scripts\seed_demo_data.py
+```
+
+Le secret reste dans `.env`, ignoré par Git. Le compte non privilégié
+`demo.school` reste utilisable sans TOTP.

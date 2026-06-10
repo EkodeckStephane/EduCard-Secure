@@ -10,6 +10,8 @@ class CardCreateRequest(BaseModel):
 
 class CardActionRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=255)
+    reason_code: str | None = Field(default=None, max_length=80)
+    reason_text: str | None = Field(default=None, max_length=255)
 
 
 class CardResponse(BaseModel):

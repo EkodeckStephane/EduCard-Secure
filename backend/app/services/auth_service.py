@@ -49,7 +49,14 @@ def verify_totp(db: Session, user_id: int, code: str) -> bool:
     return pyotp.TOTP(secret).verify(code, valid_window=1)
 
 
-def authenticate(db: Session, username: str, password: str, mfa_code: str | None, ip_context: str | None = None) -> AuthenticatedSession | str:
+def authenticate(
+    db: Session,
+    username: str,
+    password: str,
+    mfa_code: str | None,
+    ip_context: str | None = None,
+    user_agent: str | None = None,
+) -> AuthenticatedSession | str:
     user = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
     if not user or user.status != "ACTIVE" or not verify_password(password, user.password_hash):
         record_login_attempt(db, username=username, result="FAILED", user_id=user.id if user else None, ip_context=ip_context)
@@ -79,10 +86,10 @@ def authenticate(db: Session, username: str, password: str, mfa_code: str | None
         db.commit()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid MFA code")
 
-    return create_session(db, user, ip_context=ip_context)
+    return create_session(db, user, ip_context=ip_context, user_agent=user_agent)
 
 
-def create_session(db: Session, user: User, ip_context: str | None = None) -> AuthenticatedSession:
+def create_session(db: Session, user: User, ip_context: str | None = None, user_agent: str | None = None) -> AuthenticatedSession:
     raw_token = secrets.token_urlsafe(32)
     csrf_token = secrets.token_urlsafe(32)
     session = UserSession(
@@ -90,6 +97,9 @@ def create_session(db: Session, user: User, ip_context: str | None = None) -> Au
         session_token_hash=_hash_token(raw_token),
         csrf_token_hash=_hash_token(csrf_token),
         ip_context=ip_context,
+        user_agent_hash=_hash_token(user_agent) if user_agent else None,
+        user_agent_summary=(user_agent or "")[:255] or None,
+        last_active_at=datetime.utcnow(),
         expires_at=datetime.utcnow() + SESSION_TTL,
     )
     user.last_login_at = datetime.utcnow()
@@ -129,13 +139,17 @@ def rotate_session(db: Session, token: str) -> AuthenticatedSession:
 def get_session(db: Session, token: str | None) -> UserSession | None:
     if not token:
         return None
-    return db.execute(
+    session = db.execute(
         select(UserSession).where(
             UserSession.session_token_hash == _hash_token(token),
             UserSession.revoked_at.is_(None),
             UserSession.expires_at > datetime.utcnow(),
         )
     ).scalar_one_or_none()
+    if session:
+        session.last_active_at = datetime.utcnow()
+        db.commit()
+    return session
 
 
 def change_password(db: Session, user: User, current_password: str, new_password: str) -> None:

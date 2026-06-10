@@ -117,4 +117,23 @@ Small counts are masked as `MASKED`.
 - `POST /privacy/retention`: requires `privacy:update`, CSRF.
 - `GET /backups`: requires `backup:read`.
 
-OpenAPI is available at `/docs` when the FastAPI app is running.
+## Interactive OpenAPI
+
+- Swagger UI: `/docs`
+- ReDoc: `/redoc`
+- OpenAPI JSON: `/openapi.json`
+
+To test protected routes in Swagger:
+
+1. Execute `POST /api/v1/auth/login`.
+2. The browser retains the secure session cookie for the API origin.
+3. Copy the returned `csrf_token`.
+4. For POST, PATCH or other CSRF-protected operations, paste that value into
+   the `X-CSRF-Token` request parameter displayed by Swagger.
+5. Backend RBAC and scope restrictions remain active.
+
+## Redesign additions
+
+- `GET /dashboard/kpi`: role-specific metrics, real period deltas and trends.
+- `GET /cards/{id}/pdf`: server-side CR80 card PDF with a short-lived print QR.
+- `POST /exports/portability`: scoped and audited Ed25519-signed personal export.

@@ -22,6 +22,10 @@ class ChangeLanguageRequest(BaseModel):
     preferred_language: str = Field(pattern="^(fr|en)$")
 
 
+class UpdateProfilePreferencesRequest(BaseModel):
+    preferred_theme: str = Field(pattern="^(light|dark|system)$")
+
+
 class MfaSetupResponse(BaseModel):
     provisioning_uri: str
     secret_preview: str
@@ -36,6 +40,7 @@ class MeResponse(BaseModel):
     username: str
     display_name: str
     preferred_language: str
+    preferred_theme: str
     roles: list[str]
     permissions: list[str]
     scopes: list[dict]
